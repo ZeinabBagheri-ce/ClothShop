@@ -1,0 +1,12 @@
+{% extends "_base.html" %}
+
+{% block content %}
+<div class="container mt-5 text-center">
+    <h3>آیا مطمئنید که می‌خواهید خارج شوید؟</h3>
+    <form method="post" action="{% url 'accounts:logout' %}">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-danger">خروج</button>
+        <a href="{% url 'home:home' %}" class="btn btn-secondary">بازگشت</a>
+    </form>
+</div>
+{% endblock %}

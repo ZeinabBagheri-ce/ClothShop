@@ -1,0 +1,88 @@
+<nav class="navbar navbar-expand-lg navbar-light bg-light">
+  <div class="container-fluid">
+    <a class="navbar-brand" href="{% url 'home:about' %}">NEVADO</a>
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse"
+            data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent"
+            aria-expanded="false" aria-label="Toggle navigation">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+
+        <li class="nav-item">
+          <a class="nav-link{% if request.resolver_match.url_name == 'home' %} active{% endif %}"
+             aria-current="page" href="{% url 'home:home' %}">Home</a>
+        </li>
+
+        <li class="nav-item">
+          <a class="nav-link" href="{% url 'home:about' %}">About us</a>
+        </li>
+
+        <!-- محصولات -->
+        <li class="nav-item">
+          <a class="nav-link" href="{% url 'products:list' %}">Products</a>
+        </li>
+
+        <!-- دسته‌ها (داینامیک) -->
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown"
+             role="button" data-bs-toggle="dropdown" aria-expanded="false">
+            Categories
+          </a>
+          <ul class="dropdown-menu" aria-labelledby="navbarDropdown">
+            {% for cat in top_categories %}
+              {% if cat.children.all %}
+                <li class="dropdown-submenu">
+                  <a class="dropdown-item d-flex justify-content-between align-items-center"
+                     href="{% url 'products:category' cat.slug %}">
+                    {{ cat.name }}
+                    <span class="ms-2">&rsaquo;</span>
+                  </a>
+                  <!-- زیرمنو -->
+                  <ul class="dropdown-menu">
+                    {% for sub in cat.children.all %}
+                      <li><a class="dropdown-item" href="{% url 'products:category' sub.slug %}">{{ sub.name }}</a></li>
+                    {% empty %}
+                      <li><span class="dropdown-item text-muted">—</span></li>
+                    {% endfor %}
+                  </ul>
+                </li>
+              {% else %}
+                <li><a class="dropdown-item" href="{% url 'products:category' cat.slug %}">{{ cat.name }}</a></li>
+              {% endif %}
+            {% empty %}
+              <li><span class="dropdown-item text-muted">No categories</span></li>
+            {% endfor %}
+          </ul>
+        </li>
+
+        {% if user.is_authenticated %}
+          <li class="nav-item"><a class="nav-link" href="{% url 'accounts:logout' %}">خروج</a></li>
+          <li class="nav-item"><a class="nav-link" href="{% url 'accounts:profile' %}">پروفایل</a></li>
+        {% else %}
+          <li class="nav-item"><a class="nav-link" href="{% url 'accounts:login' %}">ورود</a></li>
+          <li class="nav-item"><a class="nav-link" href="{% url 'accounts:register' %}">ثبت‌نام</a></li>
+        {% endif %}
+
+      </ul>
+
+      <!-- فرم جستجو: ارسال به لیست محصولات -->
+      <form class="d-flex" method="get" action="{% url 'products:list' %}">
+        <input class="form-control me-2" type="search" placeholder="Search products…" aria-label="Search"
+               name="q" value="{{ query|default_if_none:'' }}">
+        <button class="btn btn-outline-success" type="submit">Search</button>
+      </form>
+    </div>
+  </div>
+</nav>
+
+<!-- برای Bootstrap submenu (اگر لازم شد) -->
+<style>
+/* استایل خیلی ساده برای زیرمنوی یک‌سطحی */
+.dropdown-submenu { position: relative; }
+.dropdown-submenu > .dropdown-menu {
+  top: 0; left: 100%;
+  margin-top: -0.5rem;
+}
+</style>
