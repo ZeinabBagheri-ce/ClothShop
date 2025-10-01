@@ -1,12 +1,34 @@
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 from django.utils.text import slugify
+from django.core.exceptions import ValidationError
+from django.urls import reverse
 
 
-# -------------------- Category (درختی) --------------------
+def unique_slugify(instance, value, field_name: str = "slug", allow_unicode: bool = True, max_length: int = 160):
+
+    base = slugify(value, allow_unicode=allow_unicode) or "item"
+    field = instance._meta.get_field(field_name)
+    max_len = getattr(field, "max_length", max_length) or max_length
+    base = base[:max_len]
+
+    slug = base
+    Model = instance.__class__
+    qs = Model._default_manager.all()
+    if instance.pk:
+        qs = qs.exclude(pk=instance.pk)
+
+    i = 2
+    while qs.filter(**{field_name: slug}).exists():
+        suffix = f"-{i}"
+        slug = (base[: max_len - len(suffix)]) + suffix
+        i += 1
+    return slug
+
+
 class Category(models.Model):
     name = models.CharField(_("نام دسته"), max_length=100)
-    slug = models.SlugField(_("اسلاگ"), unique=True, allow_unicode=True)
+    slug = models.SlugField(_("اسلاگ"), unique=True, allow_unicode=True, max_length=120)
     parent = models.ForeignKey(
         "self", null=True, blank=True,
         related_name="children",
@@ -18,33 +40,53 @@ class Category(models.Model):
         verbose_name = _("دسته")
         verbose_name_plural = _("دسته‌ها")
         ordering = ["name"]
+        indexes = [models.Index(fields=["slug"])]
 
     def __str__(self):
         return self.name
 
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            self.slug = unique_slugify(self, self.name, allow_unicode=True, max_length=120)
+        super().save(*args, **kwargs)
 
-# -------------------- Brand --------------------
+    def get_absolute_url(self):
+        return reverse("products:category", args=[self.slug])
+
+
 class Brand(models.Model):
     name = models.CharField(_("نام برند"), max_length=100, unique=True)
-    slug = models.SlugField(_("اسلاگ"), unique=True, allow_unicode=True)
+    slug = models.SlugField(_("اسلاگ"), unique=True, allow_unicode=True, max_length=120)
 
     class Meta:
         verbose_name = _("برند")
         verbose_name_plural = _("برندها")
         ordering = ["name"]
+        indexes = [models.Index(fields=["slug"])]
 
     def __str__(self):
         return self.name
 
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            self.slug = unique_slugify(self, self.name, allow_unicode=True, max_length=120)
+        super().save(*args, **kwargs)
 
-# -------------------- Color / Size (ویژگی‌های قابل انتخاب) --------------------
+    def get_absolute_url(self):
+        return reverse("products:brand", args=[self.slug])
+
+
 class Color(models.Model):
-    name = models.CharField(_("رنگ"), max_length=50, unique=True)
-    code = models.CharField(
-        _("کد رنگ (اختیاری، HEX)"),
+    name = models.CharField(_("رنگ"), max_length=50)
+
+    hex_code = models.CharField(
+        _("کد HEX (اختیاری)"),
         max_length=7, blank=True,
         help_text=_("مثال: #000000")
     )
+
+    code = models.CharField(_("کد یکتای رنگ"), max_length=32, blank=True, null=True,
+                            help_text=_("مثل: RED, BLK, CRM …"))
 
     class Meta:
         verbose_name = _("رنگ")
@@ -56,8 +98,11 @@ class Color(models.Model):
 
 
 class Size(models.Model):
-    name = models.CharField(_("سایز"), max_length=20, unique=True)
+    name = models.CharField(_("سایز"), max_length=20)
     sort_order = models.PositiveIntegerField(_("ترتیب"), default=0)
+    # کد یکتای سایز
+    code = models.CharField(_("کد یکتای سایز"), max_length=32, blank=True, null=True,
+                            help_text=_("مثل: S, M, L, 38, 40 …"))
 
     class Meta:
         verbose_name = _("سایز")
@@ -68,13 +113,12 @@ class Size(models.Model):
         return self.name
 
 
-# -------------------- Product --------------------
 class Product(models.Model):
     category = models.ForeignKey(Category, related_name="products", on_delete=models.PROTECT)
     brand = models.ForeignKey(Brand, related_name="products", on_delete=models.PROTECT)
 
     name = models.CharField(_("نام محصول"), max_length=200)
-    slug = models.SlugField(_("اسلاگ"), unique=True, allow_unicode=True)
+    slug = models.SlugField(_("اسلاگ"), unique=True, allow_unicode=True, max_length=160)
 
     description = models.TextField(_("توضیحات"), blank=True)
 
@@ -97,21 +141,32 @@ class Product(models.Model):
             models.Index(fields=["is_active"]),
             models.Index(fields=["brand"]),
             models.Index(fields=["category"]),
+            models.Index(fields=["slug"]),
         ]
 
     def __str__(self):
         return self.name
+
+    def clean(self):
+        if self.discount_price is not None and self.discount_price >= self.price:
+            raise ValidationError({"discount_price": _("قیمت با تخفیف باید کمتر از قیمت پایه باشد.")})
 
     @property
     def base_final_price(self):
         return self.discount_price or self.price
 
     def stock_total(self) -> int:
-        # جمع موجودی همهٔ واریانت‌ها
         return sum(self.variations.values_list("stock", flat=True))
 
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            self.slug = unique_slugify(self, self.name, allow_unicode=True, max_length=160)
+        super().save(*args, **kwargs)
 
-# -------------------- Product Image (گالری) --------------------
+    def get_absolute_url(self):
+        return reverse("products:detail", args=[self.slug])
+
+
 class ProductImage(models.Model):
     product = models.ForeignKey(Product, related_name="images", on_delete=models.CASCADE)
     image = models.ImageField(_("تصویر"), upload_to="products/gallery/%Y/%m/")
@@ -127,7 +182,6 @@ class ProductImage(models.Model):
         return f"تصویر {self.product.name}"
 
 
-# -------------------- Product Variation (رنگ×سایز با SKU/موجودی/قیمت) --------------------
 class ProductVariation(models.Model):
     product = models.ForeignKey(Product, related_name="variations", on_delete=models.CASCADE)
 
@@ -151,7 +205,6 @@ class ProductVariation(models.Model):
         verbose_name_plural = _("واریانت‌های محصول")
         ordering = ["product", "color__name", "size__sort_order", "size__name"]
         constraints = [
-            # در هر محصول، ترکیب رنگ+سایز باید یکتا باشد
             models.UniqueConstraint(
                 fields=["product", "color", "size"],
                 name="unique_variation_per_product_color_size",
@@ -172,5 +225,4 @@ class ProductVariation(models.Model):
 
     @property
     def final_price(self):
-        # اگر قیمت اختصاصی دارد، همان؛ وگرنه قیمت/تخفیف محصول
         return self.price_override or self.product.base_final_price

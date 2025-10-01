@@ -1,0 +1,156 @@
+{% load static i18n %}
+
+<footer class="site-footer mt-5 pt-5 border-top bg-light">
+  <div class="container">
+    <!-- بالایی -->
+    <div class="row g-4 mb-4">
+      <!-- برند / توضیح کوتاه -->
+      <div class="col-12 col-lg-4">
+        <a
+          href="{% url 'home:index' %}"
+          class="fs-4 fw-bold text-decoration-none text-dark"
+          >نِوادو</a
+        >
+        <p class="text-muted mt-2">
+          فروشگاه آنلاین پوشاک؛ ارسال سریع، پشتیبانی دوستانه و تضمین بازگشت وجه.
+          هر روز با پیشنهادهای تازه!
+        </p>
+
+        <div class="d-flex gap-3 mt-3">
+          <a class="text-muted fs-5" href="#" aria-label="Instagram">
+            <i class="bi bi-instagram"></i>
+          </a>
+          <a class="text-muted fs-5" href="#" aria-label="Telegram">
+            <i class="bi bi-telegram"></i>
+          </a>
+          <a class="text-muted fs-5" href="#" aria-label="Twitter">
+            <i class="bi bi-twitter-x"></i>
+          </a>
+          <a class="text-muted fs-5" href="#" aria-label="Linkedin">
+            <i class="bi bi-linkedin"></i>
+          </a>
+        </div>
+      </div>
+
+      <!-- لینک‌های سریع -->
+      <div class="col-6 col-lg-2">
+        <h6 class="fw-semibold mb-3">{% trans "لینک‌های سریع" %}</h6>
+        <ul class="list-unstyled small">
+          <li class="mb-2">
+            <a
+              class="link-dark text-decoration-none"
+              href="{% url 'home:about' %}"
+              >{% trans "درباره‌ما" %}</a
+            >
+          </li>
+          <li class="mb-2">
+            <a
+              class="link-dark text-decoration-none"
+              href="{% url 'products:list' %}"
+              >{% trans "محصولات" %}</a
+            >
+          </li>
+          <li class="mb-2">
+            <a
+              class="link-dark text-decoration-none"
+              href="{% url 'cart:detail' %}"
+              >{% trans "سبد خرید" %}</a
+            >
+          </li>
+          {% if request.user.is_authenticated %}
+          <li class="mb-2">
+            <a
+              class="link-dark text-decoration-none"
+              href="{% url 'accounts:profile' %}"
+              >{% trans "پروفایل من" %}</a
+            >
+          </li>
+          {% else %}
+          <li class="mb-2">
+            <a
+              class="link-dark text-decoration-none"
+              href="{% url 'accounts:login' %}"
+              >{% trans "ورود" %}</a
+            >
+          </li>
+          {% endif %}
+        </ul>
+      </div>
+
+      <!-- دسته‌بندی‌ها (اختیاری: از context) -->
+      <div class="col-6 col-lg-3">
+        <h6 class="fw-semibold mb-3">{% trans "دسته‌بندی‌ها" %}</h6>
+        <ul class="list-unstyled small">
+          {% for c in footer_categories|default:top_categories|slice:":6" %}
+          <li class="mb-2">
+            <a
+              class="link-dark text-decoration-none"
+              href="{{ c.get_absolute_url }}"
+              >{{ c.name }}</a
+            >
+          </li>
+          {% empty %}
+          <li class="text-muted">{% trans "به‌زودی…" %}</li>
+          {% endfor %}
+        </ul>
+      </div>
+
+      <!-- خبرنامه -->
+      <div class="col-12 col-lg-3">
+        <h6 class="fw-semibold mb-3">{% trans "خبرنامه" %}</h6>
+        <p class="text-muted small mb-2">
+          {% trans "جدیدترین تخفیف‌ها را در ایمیل دریافت کنید" %}
+        </p>
+        <form class="d-flex gap-2" method="post" action="#">
+          {% csrf_token %}
+          <input
+            type="email"
+            class="form-control"
+            placeholder="{% trans 'ایمیل شما' %}"
+            required
+          />
+          <button class="btn btn-primary">{% trans "عضویت" %}</button>
+        </form>
+
+        <ul class="list-unstyled small mt-3 mb-0 text-muted">
+          <li class="mb-1">
+            <i class="bi bi-truck"></i> {% trans "ارسال سریع" %}
+          </li>
+          <li class="mb-1">
+            <i class="bi bi-shield-check"></i> {% trans "ضمانت بازگشت ۷روزه" %}
+          </li>
+          <li class="mb-1">
+            <i class="bi bi-headset"></i> {% trans "پشتیبانی ۷ روز هفته" %}
+          </li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- پایینی -->
+    <div
+      class="d-flex flex-column flex-md-row gap-2 justify-content-between align-items-center py-3 border-top"
+    >
+      <div class="small text-muted">
+        <span id="ft-year"></span>
+        © تمامی حقوق برای <strong>نِوادو</strong> محفوظ است.
+      </div>
+      <ul class="list-inline small mb-0">
+        <li class="list-inline-item">
+          <a class="link-secondary text-decoration-none" href="#"
+            >{% trans "قوانین و مقررات" %}</a
+          >
+        </li>
+        <li class="list-inline-item">
+          <a class="link-secondary text-decoration-none" href="#"
+            >{% trans "حریم خصوصی" %}</a
+          >
+        </li>
+        <li class="list-inline-item">
+          <a class="link-secondary text-decoration-none" href="#"
+            >{% trans "تماس با ما" %}</a
+          >
+        </li>
+      </ul>
+    </div>
+  </div>
+</footer>

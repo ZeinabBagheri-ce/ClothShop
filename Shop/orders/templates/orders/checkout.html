@@ -1,0 +1,272 @@
+{% extends "_base.html" %} {% load i18n %} {% block title %}{% trans "تسویه
+حساب" %}{% endblock %} {% block content %}
+<div class="container my-5">
+  <h3 class="mb-4">{% trans "تسویه حساب" %}</h3>
+
+  <div class="d-flex align-items-center mb-4">
+    <div class="me-3">
+      <span
+        class="badge {% if step == 'address' %}text-bg-primary{% else %}text-bg-secondary{% endif %}"
+        >1</span
+      >
+      <span class="ms-1">{% trans "آدرس" %}</span>
+    </div>
+    <div class="flex-grow-1 border-top" style="opacity: 0.3"></div>
+    <div class="ms-3">
+      <span
+        class="badge {% if step == 'review' %}text-bg-primary{% else %}text-bg-secondary{% endif %}"
+        >2</span
+      >
+      <span class="ms-1">{% trans "مرور و ثبت" %}</span>
+    </div>
+  </div>
+
+  {% if step == "address" %}
+  <div class="row g-4">
+    <div class="col-12 col-lg-7">
+      <div class="card">
+        <div class="card-header fw-semibold">
+          {% trans "افزودن آدرس جدید" %}
+        </div>
+        <div class="card-body">
+          {% if addr_form %} {% if addr_form.non_field_errors %}
+          <div class="alert alert-danger">
+            {% for e in addr_form.non_field_errors %}{{ e }}<br />{% endfor %}
+          </div>
+          {% endif %} {% for field in addr_form %} {% if field.errors %}
+          <div class="alert alert-danger">
+            {{ field.label }}: {{ field.errors|join:", " }}
+          </div>
+          {% endif %} {% endfor %} {% endif %}
+
+          <form method="post">
+            {% csrf_token %}
+            <div class="row g-3">
+              <div class="col-md-6">
+                {{ addr_form.full_name.label_tag }} {{ addr_form.full_name }}
+              </div>
+              <div class="col-md-6">
+                {{ addr_form.phone.label_tag }} {{ addr_form.phone }}
+              </div>
+              <div class="col-md-4">
+                {{ addr_form.province.label_tag }} {{ addr_form.province }}
+              </div>
+              <div class="col-md-4">
+                {{ addr_form.city.label_tag }} {{ addr_form.city }}
+              </div>
+              <div class="col-md-4">
+                {{ addr_form.postal_code.label_tag }} {{ addr_form.postal_code
+                }}
+              </div>
+              <div class="col-md-8">
+                {{ addr_form.address_exact.label_tag }} {{
+                addr_form.address_exact }}
+              </div>
+              <div class="col-md-4">
+                {{ addr_form.description.label_tag }} {{ addr_form.description
+                }}
+              </div>
+              <div class="col-md-12 form-check">
+                {{ addr_form.is_default }}
+                <label class="form-check-label"
+                  >{{ addr_form.is_default.label }}</label
+                >
+              </div>
+            </div>
+            <div class="mt-3 d-flex gap-2">
+              <button class="btn btn-primary">
+                {% trans "ذخیره آدرس و ادامه" %}
+              </button>
+              {% if has_addresses %}
+              <a
+                class="btn btn-outline-secondary"
+                href="{{ request.path }}?step=review"
+                >{% trans "انصراف و بازگشت" %}</a
+              >
+              {% endif %}
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-12 col-lg-5">
+      <div class="card">
+        <div class="card-header fw-semibold">{% trans "خلاصه سبد" %}</div>
+        <div class="card-body">
+          {% if cart.total_quantity %}
+          <ul class="list-group list-group-flush">
+            {% for row in cart %}
+            <li
+              class="list-group-item d-flex justify-content-between align-items-center"
+            >
+              <div>
+                <div class="fw-semibold">{{ row.product.name }}</div>
+                <div class="text-muted small">
+                  {% if row.variation.color %}{{ row.variation.color.name }}{%
+                  endif %} {% if row.variation.size %}/ {{
+                  row.variation.size.name }}{% endif %} — SKU: {{
+                  row.variation.sku }}
+                </div>
+              </div>
+              <div>
+                x{{ row.quantity }} — {{ row.total }}
+                <span class="text-muted small">تومان</span>
+              </div>
+            </li>
+            {% endfor %}
+          </ul>
+          <hr />
+          <div class="d-flex justify-content-between">
+            <span>{% trans "جمع جزء" %}</span>
+            <strong
+              >{{ cart.total_price }}
+              <span class="text-muted small">تومان</span></strong
+            >
+          </div>
+          {% else %}
+          <div class="alert alert-info">{% trans "سبد شما خالی است." %}</div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {% else %}
+  <div class="row g-4">
+    <div class="col-12 col-lg-7">
+      <div class="card">
+        <div
+          class="card-header fw-semibold d-flex justify-content-between align-items-center"
+        >
+          <span>{% trans "آدرس و توضیحات" %}</span>
+          <a
+            class="btn btn-sm btn-outline-secondary"
+            href="{{ request.path }}?step=address"
+            >{% trans "افزودن آدرس جدید" %}</a
+          >
+        </div>
+        <div class="card-body">
+          {% if form.non_field_errors %}
+          <div class="alert alert-danger">
+            {% for e in form.non_field_errors %}{{ e }}<br />{% endfor %}
+          </div>
+          {% endif %} {% for field in form %} {% if field.errors %}
+          <div class="alert alert-danger">
+            {{ field.label }}: {{ field.errors|join:", " }}
+          </div>
+          {% endif %} {% endfor %}
+
+          <form method="post">
+            {% csrf_token %}
+            <div class="mb-3">
+              <label class="form-label">{{ form.address_id.label }}</label>
+              {{ form.address_id }}
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label">{{ form.coupon_code.label }}</label>
+              {{ form.coupon_code }}
+              <div class="form-text">
+                {% trans "اگر کد تخفیف دارید وارد کنید." %}
+              </div>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label">{{ form.note.label }}</label>
+              {{ form.note }}
+            </div>
+
+            <button class="btn btn-primary">{% trans "ثبت سفارش" %}</button>
+            <a
+              class="btn btn-outline-secondary ms-2"
+              href="{% url 'cart:detail' %}"
+              >{% trans "بازگشت به سبد" %}</a
+            >
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-12 col-lg-5">
+      <div class="card">
+        <div class="card-header fw-semibold">{% trans "خلاصه سفارش" %}</div>
+        <div class="card-body">
+          {% if cart.total_quantity %}
+          <ul class="list-group list-group-flush">
+            {% for row in cart %}
+            <li
+              class="list-group-item d-flex justify-content-between align-items-center"
+            >
+              <div>
+                <div class="fw-semibold">{{ row.product.name }}</div>
+                <div class="text-muted small">
+                  {% if row.variation.color %}{{ row.variation.color.name }}{%
+                  endif %} {% if row.variation.size %}/ {{
+                  row.variation.size.name }}{% endif %} — SKU: {{
+                  row.variation.sku }}
+                </div>
+              </div>
+              <div>
+                x{{ row.quantity }} — {{ row.total }}
+                <span class="text-muted small">تومان</span>
+              </div>
+            </li>
+            {% endfor %}
+          </ul>
+          <hr />
+          <div class="d-flex justify-content-between">
+            <span>{% trans "جمع جزء" %}</span>
+            <strong
+              >{{ cart.total_price }}
+              <span class="text-muted small">تومان</span></strong
+            >
+          </div>
+          <div class="text-muted small mt-2">
+            {% trans "تخفیف و هزینه ارسال پس از اعمال کد در مرحله ثبت محاسبه
+            می‌شود." %}
+          </div>
+          {% else %}
+          <div class="alert alert-info">{% trans "سبد شما خالی است." %}</div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+</div>
+
+{% if step == "address" %}
+<script>
+  document.addEventListener("change", async function (e) {
+    const target = e.target;
+    if (!target.matches('select[name="addr_new-province"]')) return;
+    const citySelect = document.querySelector('select[name="addr_new-city"]');
+    if (!citySelect) return;
+
+    citySelect.innerHTML =
+      '<option value="">{% trans "در حال بارگذاری..." %}</option>';
+    const provId = target.value;
+    if (!provId) {
+      citySelect.innerHTML =
+        '<option value="">{% trans "ابتدا استان را انتخاب کنید" %}</option>';
+      return;
+    }
+    try {
+      const resp = await fetch(
+        "{% url 'accounts:ajax_cities' %}?province_id=" +
+          encodeURIComponent(provId),
+      );
+      const data = await resp.json();
+      let opts = '<option value="">{% trans "انتخاب کنید" %}</option>';
+      (data.results || []).forEach(
+        (c) => (opts += `<option value="${c.id}">${c.name}</option>`),
+      );
+      citySelect.innerHTML = opts;
+    } catch {
+      citySelect.innerHTML =
+        '<option value="">{% trans "خطا در دریافت شهرها" %}</option>';
+    }
+  });
+</script>
+{% endif %} {% endblock %}

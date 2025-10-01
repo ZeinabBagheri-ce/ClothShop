@@ -1,5 +1,36 @@
-{% extends '_base.html'%}
+{% extends "_base.html" %} {% load i18n %} {% block title %}{% trans "درباره ما"
+%}{% endblock %} {% block content %}
+<div class="container py-5" style="max-width: 900px">
+  <h2 class="fw-bold text-center mb-4">{% trans "درباره نِوادو" %}</h2>
 
-{% block title %}Home{% endblock %}
+  <p class="lead text-muted text-center mb-5">
+    فروشگاه اینترنتی نِوادو با هدف ارائه بهترین پوشاک و لوازم مد راه‌اندازی شده
+    است.
+  </p>
 
-{% block content %}<h1>about page</h1>{% endblock %}
+  <div class="row g-4">
+    <div class="col-md-6">
+      <h5 class="fw-semibold">{% trans "ماموریت ما" %}</h5>
+      <p>
+        ما تلاش می‌کنیم تا تجربه خریدی ساده، سریع و لذت‌بخش برای مشتریانمان
+        فراهم کنیم. کیفیت کالاها، قیمت منصفانه و پشتیبانی دائمی ارزش‌های اصلی ما
+        هستند.
+      </p>
+    </div>
+    <div class="col-md-6">
+      <h5 class="fw-semibold">{% trans "چشم‌انداز ما" %}</h5>
+      <p>
+        تبدیل‌شدن به یکی از معتبرترین فروشگاه‌های آنلاین مد و پوشاک در ایران و
+        ایجاد تجربه‌ای متفاوت در خرید اینترنتی.
+      </p>
+    </div>
+  </div>
+
+  <div class="text-center mt-5">
+    <h5 class="fw-semibold">{% trans "تماس با ما" %}</h5>
+    <p class="text-muted">
+      {% trans "ایمیل:" %} info@nevado.com | {% trans "تلفن:" %} 021-12345678
+    </p>
+  </div>
+</div>
+{% endblock %}

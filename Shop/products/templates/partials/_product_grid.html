@@ -1,0 +1,40 @@
+{% load static %} {% for p in items %}
+<div class="col-6 col-md-3">
+  <div class="card h-100">
+    <a href="{{ p.get_absolute_url }}">
+      {% with img=p.images.first %} {% if img %}
+      <img
+        src="{{ img.image.url }}"
+        class="card-img-top"
+        alt="{{ img.alt_text|default:p.name }}"
+      />
+      {% elif p.image %}
+      <img src="{{ p.image.url }}" class="card-img-top" alt="{{ p.name }}" />
+      {% else %}
+      <img
+        src="{% static 'img/placeholder.png' %}"
+        class="card-img-top"
+        alt="{{ p.name }}"
+      />
+      {% endif %} {% endwith %}
+    </a>
+    <div class="card-body">
+      <h6 class="card-title mb-2">
+        <a
+          class="text-decoration-none text-dark"
+          href="{{ p.get_absolute_url }}"
+          >{{ p.name }}</a
+        >
+      </h6>
+      {% if p.discount_price %}
+      <div><del class="text-muted small">{{ p.price|floatformat:0 }}</del></div>
+      <div class="fw-bold">{{ p.discount_price|floatformat:0 }} تومان</div>
+      {% else %}
+      <div class="fw-bold">{{ p.price|floatformat:0 }} تومان</div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% empty %}
+<div class="col-12"><div class="alert alert-info">محصولی یافت نشد.</div></div>
+{% endfor %}

@@ -7,7 +7,6 @@ from django.utils.translation import gettext_lazy as _
 from django.core.validators import RegexValidator
 
 
-# ========== User & Manager ==========
 class UserManager(BaseUserManager):
     def create_user(self, email, username, password=None, **extra_fields):
         if not email:
@@ -36,10 +35,8 @@ class UserManager(BaseUserManager):
             raise ValueError(_("برای سوپر یوزر باید گذرواژه تعیین کنید"))
         return self.create_user(email, username, password, **extra_fields)
 
-    # اجازه لاگین با ایمیل یا نام‌کاربری (Case-insensitive)
     def get_by_natural_key(self, identifier: str):
         return self.get(Q(email__iexact=identifier) | Q(username__iexact=identifier))
-
 
 class User(AbstractBaseUser, PermissionsMixin):
     email = models.EmailField(_("ایمیل"), unique=True, db_index=True)
@@ -58,7 +55,6 @@ class User(AbstractBaseUser, PermissionsMixin):
     date_joined = models.DateTimeField(_("تاریخ عضویت"), default=timezone.now)
 
     objects = UserManager()
-
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS = ["username"]
 
@@ -74,90 +70,36 @@ class User(AbstractBaseUser, PermissionsMixin):
     def full_name(self):
         return f"{self.first_name} {self.last_name}".strip()
 
-
-# ========== Profile ==========
 class Profile(models.Model):
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="profile")
-
-    phone = models.CharField(
-        _("شماره موبایل"),
-        max_length=20,
-        unique=True,
-        null=True, blank=True,
-        help_text=_("مثال: +09123456789"),
-    )
+    phone = models.CharField(_("شماره موبایل"), max_length=20, unique=True, null=True, blank=True,
+                             help_text=_("مثال: +09123456789"))
     is_phone_verified = models.BooleanField(_("تأیید تلفن"), default=False)
     avatar = models.ImageField(_("تصویر پروفایل"), upload_to="avatars/%Y/%m/", null=True, blank=True)
     date_of_birth = models.DateField(_("تاریخ تولد"), null=True, blank=True)
 
-    # newsletter_opt_in = models.BooleanField(_("اشتراک خبرنامه"), default=False)
-    # marketing_opt_in = models.BooleanField(_("اجازه ارسال پیشنهادات"), default=False)
-
     def __str__(self):
         return f"پروفایل {self.user.username}"
 
-
-#
-# class Address(models.Model):
-#
-#
-#     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="addresses")
-#
-#     full_name = models.CharField(_("نام و نام خانوادگی"), max_length=100)
-#     phone = models.CharField(_("شماره تلفن"), max_length=20, blank=True)
-#     line1 = models.CharField(_("آدرس"), max_length=255)
-#     line2 = models.CharField(_(" توضیحات آدرس"), max_length=255, blank=True)
-#     city = models.CharField(_("شهر"), max_length=100)
-#     state = models.CharField(_("استان"), max_length=100, blank=True)
-#     postal_code = models.CharField(_("کد پستی"), max_length=20)
-#     country = models.CharField(_("کشور"), max_length=2, help_text=_("کد کشور دوحرفی ISO مثل IR, TR, DE"))
-#
-#     is_default = models.BooleanField(_("آدرس پیش‌فرض"), default=False)
-#
-#     class Meta:
-#         indexes = [
-#             models.Index(fields=["user", "is_default"]),
-#             models.Index(fields=["country", "postal_code"]),
-#         ]
-#         constraints = [
-#             models.UniqueConstraint(
-#                 fields=["user"],
-#                 condition=models.Q(is_default=True),
-#                 name="unique_default_address_per_type",
-#             )
-#         ]
-#         verbose_name = _("آدرس")
-#         verbose_name_plural = _("آدرس‌ها")
-#
-#     def __str__(self):
-#         return f"{self.full_name} - {self.city}"
-
-
 class Province(models.Model):
     name = models.CharField(_("استان"), max_length=100, unique=True)
-
     class Meta:
         ordering = ["name"]
         verbose_name = _("استان")
         verbose_name_plural = _("استان‌ها")
-
     def __str__(self):
         return self.name
-
 
 class City(models.Model):
     province = models.ForeignKey(Province, on_delete=models.CASCADE, related_name="cities")
     name = models.CharField(_("شهر"), max_length=120)
-
     class Meta:
         ordering = ["name"]
         unique_together = [("province", "name")]
         verbose_name = _("شهر")
         verbose_name_plural = _("شهرها")
-
     def __str__(self):
         return f"{self.name} ({self.province.name})"
-
 
 class Address(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="addresses")
@@ -166,8 +108,7 @@ class Address(models.Model):
     phone = models.CharField(_("شماره تلفن"), max_length=20, blank=True)
 
     address_exact = models.CharField(_("آدرس دقیق"), max_length=255, default="نامشخص")
-
-    description   = models.CharField(_("توضیحات"), max_length=255, blank=True)  # قبلاً line2
+    description   = models.CharField(_("توضیحات"), max_length=255, blank=True)
 
     province = models.ForeignKey(Province, on_delete=models.PROTECT, related_name="addresses",
                                  null=True, verbose_name=_("استان"))
@@ -175,13 +116,15 @@ class Address(models.Model):
                              null=True, verbose_name=_("شهر"))
 
     postal_code = models.CharField(_("کد پستی"), max_length=20)
-    country = models.CharField(_("کشور"), max_length=2, help_text=_("کد کشور دوحرفی ISO مثل IR, TR, DE"))
+    # country حذف شد
     is_default = models.BooleanField(_("آدرس پیش‌فرض"), default=False)
+
+    created_at = models.DateTimeField(_("ایجاد"), auto_now_add=True)
+    updated_at = models.DateTimeField(_("به‌روزرسانی"), auto_now=True)
 
     class Meta:
         indexes = [
             models.Index(fields=["user", "is_default"]),
-            models.Index(fields=["country", "postal_code"]),
             models.Index(fields=["province", "city"]),
         ]
         verbose_name = _("آدرس")

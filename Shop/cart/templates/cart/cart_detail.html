@@ -1,0 +1,93 @@
+{% extends "_base.html" %} {% load i18n %} {% block title %}{% trans "سبد خرید"
+%}{% endblock %} {% block content %}
+<div class="container my-5">
+  <h3 class="mb-4">{% trans "سبد خرید" %}</h3>
+
+  {% if cart.total_quantity %}
+  <div class="table-responsive">
+    <table class="table align-middle">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>{% trans "محصول" %}</th>
+          <th>{% trans "ویژگی" %}</th>
+          <th>{% trans "قیمت" %}</th>
+          <th style="width: 170px">{% trans "تعداد" %}</th>
+          <th>{% trans "جمع" %}</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in cart %}
+        <tr>
+          <td>{{ forloop.counter }}</td>
+          <td>
+            <a href="{{ row.product.get_absolute_url }}"
+              >{{ row.product.name }}</a
+            >
+          </td>
+          <td class="small text-muted">
+            {% if row.variation.color %}{{ row.variation.color.name }}{% endif
+            %} {% if row.variation.size %}/ {{ row.variation.size.name }}{%
+            endif %} — SKU: {{ row.variation.sku }}
+          </td>
+          <td>{{ row.price }} <span class="text-muted small">تومان</span></td>
+          <td>
+            <form
+              method="post"
+              action="{% url 'cart:update' row.variation.id %}"
+              class="d-flex gap-2"
+            >
+              {% csrf_token %}
+              <input
+                type="number"
+                name="quantity"
+                min="1"
+                value="{{ row.quantity }}"
+                class="form-control"
+                style="max-width: 90px"
+              />
+              <button class="btn btn-outline-secondary btn-sm">
+                {% trans "اعمال" %}
+              </button>
+            </form>
+          </td>
+          <td>{{ row.total }} <span class="text-muted small">تومان</span></td>
+          <td class="text-end">
+            <a
+              class="btn btn-sm btn-outline-danger"
+              href="{% url 'cart:remove' row.variation.id %}"
+              >{% trans "حذف" %}</a
+            >
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+      <tfoot>
+        <tr>
+          <th colspan="5" class="text-end">{% trans "جمع کل" %}:</th>
+          <th>
+            {{ cart.total_price }} <span class="text-muted small">تومان</span>
+          </th>
+          <th></th>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+
+  <div class="d-flex justify-content-between">
+    <a class="btn btn-outline-secondary" href="{% url 'products:list' %}"
+      >{% trans "ادامه خرید" %}</a
+    >
+    <a class="btn btn-primary" href="{% url 'orders:checkout' %}"
+      >{% trans "تسویه حساب" %}</a
+    >
+  </div>
+  {% else %}
+  <div class="alert alert-info">{% trans "سبد شما خالی است." %}</div>
+  <a class="btn btn-primary" href="{% url 'products:list' %}"
+    >{% trans "رفتن به محصولات" %}</a
+  >
+  {% endif %}
+</div>
+{% endblock %}

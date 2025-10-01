@@ -1,16 +1,16 @@
-from django import forms
 from django.utils.translation import gettext_lazy as _
-from django.forms import inlineformset_factory
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
 from django.contrib.auth import get_user_model
 from django.contrib.auth.forms import PasswordChangeForm
 from .models import Profile, Address, Province, City
+from django import forms
+from django.forms import inlineformset_factory
+from products.models import Product, ProductVariation, Color, Size
+from orders.models import Order
 
 User = get_user_model()
 
-
-# ---------- Register / Login ----------
 class UserRegisterForm(forms.ModelForm):
     password1 = forms.CharField(label=_("گذرواژه"), widget=forms.PasswordInput(attrs={"class": "form-control"}))
     password2 = forms.CharField(label=_("تکرار گذرواژه"), widget=forms.PasswordInput(attrs={"class": "form-control"}))
@@ -29,7 +29,7 @@ class UserRegisterForm(forms.ModelForm):
         p1 = self.cleaned_data.get("password1")
         if p1:
             try:
-                validate_password(p1)  # بر اساس AUTH_PASSWORD_VALIDATORS
+                validate_password(p1)
             except ValidationError as e:
                 raise forms.ValidationError(e.messages)
         return p1
@@ -92,7 +92,6 @@ class ProfileExtrasForm(forms.ModelForm):
         }
 
 
-# ---------- Address (multi) ----------
 class AddressForm(forms.ModelForm):
     province = forms.ModelChoiceField(
         label=_("استان"),
@@ -102,7 +101,7 @@ class AddressForm(forms.ModelForm):
     )
     city = forms.ModelChoiceField(
         label=_("شهر"),
-        queryset=City.objects.none(),   # در __init__ تنظیم می‌کنیم
+        queryset=City.objects.none(),
         widget=forms.Select(attrs={"class": "form-select"}),
         required=True,
     )
@@ -112,18 +111,16 @@ class AddressForm(forms.ModelForm):
         fields = [
             "full_name", "phone",
             "province", "city",
-            "address_exact",
-            "description",
-            "postal_code", "country",
+            "address_exact", "description",
+            "postal_code",
             "is_default",
         ]
         widgets = {
             "full_name":     forms.TextInput(attrs={"class": "form-control"}),
             "phone":         forms.TextInput(attrs={"class": "form-control"}),
             "address_exact": forms.TextInput(attrs={"class": "form-control", "placeholder": "مثلاً: خیابان ... پلاک ..."}),
-            "description":   forms.TextInput(attrs={"class": "form-control", "placeholder": "توضیحات اضافی: واحد، طبقه، نشانی افزوده"}),
+            "description":   forms.TextInput(attrs={"class": "form-control", "placeholder": "واحد/طبقه یا توضیح اضافی"}),
             "postal_code":   forms.TextInput(attrs={"class": "form-control"}),
-            "country":       forms.TextInput(attrs={"class": "form-control", "placeholder": "IR"}),
             "is_default":    forms.CheckboxInput(attrs={"class": "form-check-input"}),
         }
         labels = {
@@ -133,20 +130,15 @@ class AddressForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-
-        # اگر instance موجود باشد، شهرها را برای استان انتخاب‌شده بارگذاری کن
         if self.instance and self.instance.pk and self.instance.province_id:
             self.fields["city"].queryset = City.objects.filter(province_id=self.instance.province_id)
         else:
-
             data = self.data or None
             if data and self.prefix:
                 prov_key = f"{self.prefix}-province"
                 prov_id = data.get(prov_key)
                 if prov_id:
                     self.fields["city"].queryset = City.objects.filter(province_id=prov_id)
-
-
 
 AddressFormSet = inlineformset_factory(
     parent_model=get_user_model(),
@@ -156,7 +148,7 @@ AddressFormSet = inlineformset_factory(
     can_delete=True,
 )
 
-# ---------- Password change (Bootstrap helper) ----------
+
 class BootstrapPasswordChangeForm(PasswordChangeForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -165,3 +157,31 @@ class BootstrapPasswordChangeForm(PasswordChangeForm):
         self.fields["old_password"].widget.attrs.setdefault("autocomplete", "current-password")
         self.fields["new_password1"].widget.attrs.setdefault("autocomplete", "new-password")
         self.fields["new_password2"].widget.attrs.setdefault("autocomplete", "new-password")
+
+class ProductForm(forms.ModelForm):
+    class Meta:
+        model = Product
+        fields = ["category", "brand", "name", "slug", "description",
+                  "price", "discount_price", "is_active", "image"]
+
+VariationFormSet = inlineformset_factory(
+    parent_model=Product,
+    model=ProductVariation,
+    fields=["color", "size", "sku", "price_override", "stock", "is_active", "image"],
+    extra=1, can_delete=True
+)
+
+class ColorForm(forms.ModelForm):
+    class Meta:
+        model = Color
+        fields = ["name", "hex_code", "code"]
+
+class SizeForm(forms.ModelForm):
+    class Meta:
+        model = Size
+        fields = ["name", "sort_order", "code"]
+
+class OrderStatusForm(forms.ModelForm):
+    class Meta:
+        model = Order
+        fields = ["status"]

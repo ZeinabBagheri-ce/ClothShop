@@ -1,168 +1,187 @@
 {% extends "_base.html" %}
-{% load i18n %}
-
-{% block title %}{% trans "محصولات" %}{% endblock %}
+{% load static %}
 
 {% block content %}
-<div class="container my-5">
-  <div class="row g-4">
+<div class="container my-4">
+  <div class="row">
     <!-- Sidebar Filters -->
-    <aside class="col-12 col-lg-3">
+    <aside class="col-md-3">
       <div class="card mb-3">
-        <div class="card-header fw-semibold">{% trans "جستجو" %}</div>
+        <div class="card-header">فیلترها</div>
         <div class="card-body">
-          <form method="get" action=".">
-            <div class="input-group">
-              <input type="search" class="form-control" name="q" placeholder="{% trans 'جستجو محصول…' %}" value="{{ query|default_if_none:'' }}">
-              <button class="btn btn-outline-secondary" type="submit">{% trans "جستجو" %}</button>
+          <form method="get">
+            <!-- جستجو -->
+            <div class="mb-3">
+              <label class="form-label">جستجو</label>
+              <input type="text" name="q" value="{{ q }}" class="form-control" placeholder="نام/برند/توضیحات">
             </div>
-            {# حفظ سایر پارامترها هنگام جستجو #}
-            {% if active_brand %}<input type="hidden" name="brand" value="{{ active_brand }}">{% endif %}
-            {% if active_category %}<input type="hidden" name="cat" value="{{ active_category }}">{% endif %}
-            {% if sort %}<input type="hidden" name="sort" value="{{ sort }}">{% endif %}
-          </form>
-        </div>
-      </div>
 
-      <div class="card mb-3">
-        <div class="card-header fw-semibold">{% trans "دسته‌ها" %}</div>
-        <div class="list-group list-group-flush">
-          <a class="list-group-item list-group-item-action {% if not active_category %}active{% endif %}"
-             href="{% url 'products:list' %}{% if query or active_brand or sort %}?{% endif %}
-                  {% if query %}q={{ query }}{% endif %}
-                  {% if active_brand %}{% if query %}&{% endif %}brand={{ active_brand }}{% endif %}
-                  {% if sort %}{% if query or active_brand %}&{% endif %}sort={{ sort }}{% endif %}">
-            {% trans "همه" %}
-          </a>
-          {% for cat in categories %}
-            <a class="list-group-item list-group-item-action {% if active_category == cat.slug %}active{% endif %}"
-               href="{% url 'products:list' %}?cat={{ cat.slug }}{% if query %}&q={{ query }}{% endif %}{% if active_brand %}&brand={{ active_brand }}{% endif %}{% if sort %}&sort={{ sort }}{% endif %}">
-              {{ cat.name }}
-            </a>
-            {% if cat.children.all %}
-              <div class="list-group border-0 ms-3">
-                {% for sub in cat.children.all %}
-                  <a class="list-group-item list-group-item-action py-1 {% if active_category == sub.slug %}active{% endif %}"
-                     href="{% url 'products:list' %}?cat={{ sub.slug }}{% if query %}&q={{ query }}{% endif %}{% if active_brand %}&brand={{ active_brand }}{% endif %}{% if sort %}&sort={{ sort }}{% endif %}">
-                    • {{ sub.name }}
-                  </a>
+            <!-- دسته (والد + زیر‌دسته‌ها) -->
+            <div class="mb-3">
+              <label class="form-label">دسته</label>
+              <select name="cat" class="form-select">
+                <option value="">همه دسته‌ها</option>
+                {% for c in root_categories %}
+                  <option value="{{ c.slug }}" {% if cat == c.slug %}selected{% endif %}>{{ c.name }}</option>
+                  {% for sub in c.children.all %}
+                    <option value="{{ sub.slug }}" {% if cat == sub.slug %}selected{% endif %}>— {{ sub.name }}</option>
+                  {% endfor %}
                 {% endfor %}
+              </select>
+            </div>
+
+            <!-- برند -->
+            <div class="mb-3">
+              <label class="form-label">برند</label>
+              <select name="brand" class="form-select">
+                <option value="">همه برندها</option>
+                {% for b in brands %}
+                  <option value="{{ b.slug }}" {% if brand == b.slug %}selected{% endif %}>{{ b.name }}</option>
+                {% endfor %}
+              </select>
+            </div>
+
+            <!-- رنگ -->
+            <div class="mb-3">
+              <label class="form-label">رنگ</label>
+              <select name="color" class="form-select">
+                <option value="">همه رنگ‌ها</option>
+                {% for c in colors %}
+                  <option value="{{ c.id }}" {% if color == c.id|stringformat:"s" %}selected{% endif %}>{{ c.name }}</option>
+                {% endfor %}
+              </select>
+            </div>
+
+            <!-- سایز -->
+            <div class="mb-3">
+              <label class="form-label">سایز</label>
+              <select name="size" class="form-select">
+                <option value="">همه سایزها</option>
+                {% for s in sizes %}
+                  <option value="{{ s.id }}" {% if size == s.id|stringformat:"s" %}selected{% endif %}>{{ s.name }}</option>
+                {% endfor %}
+              </select>
+            </div>
+
+            <!-- بازه قیمت -->
+            <div class="row g-2 mb-3">
+              <div class="col">
+                <label class="form-label">حداقل قیمت</label>
+                <input type="number" name="min" value="{{ min_price }}" class="form-control" min="0">
+              </div>
+              <div class="col">
+                <label class="form-label">حداکثر قیمت</label>
+                <input type="number" name="max" value="{{ max_price }}" class="form-control" min="0">
+              </div>
+            </div>
+
+            <!-- فقط موجود -->
+            <div class="form-check mb-3">
+              <input class="form-check-input" type="checkbox" name="in_stock" value="1" id="in_stock"
+                     {% if in_stock == "1" %}checked{% endif %}>
+              <label class="form-check-label" for="in_stock">فقط موجود</label>
+            </div>
+
+            <div class="d-grid">
+              <button class="btn btn-primary" type="submit">اعمال فیلتر</button>
+            </div>
+
+            {% if request.GET %}
+              <div class="text-center mt-2">
+                <a href="{% url 'products:list' %}" class="small text-danger">پاک کردن فیلترها</a>
               </div>
             {% endif %}
-          {% empty %}
-            <div class="p-3 text-muted">{% trans "دسته‌ای یافت نشد." %}</div>
-          {% endfor %}
-        </div>
-      </div>
-
-      <div class="card">
-        <div class="card-header fw-semibold">{% trans "برندها" %}</div>
-        <div class="list-group list-group-flush">
-          <a class="list-group-item list-group-item-action {% if not active_brand %}active{% endif %}"
-             href="{% url 'products:list' %}{% if query or active_category or sort %}?{% endif %}
-                  {% if query %}q={{ query }}{% endif %}
-                  {% if active_category %}{% if query %}&{% endif %}cat={{ active_category }}{% endif %}
-                  {% if sort %}{% if query or active_category %}&{% endif %}sort={{ sort }}{% endif %}">
-            {% trans "همه" %}
-          </a>
-          {% for b in brands %}
-            <a class="list-group-item list-group-item-action {% if active_brand == b.slug %}active{% endif %}"
-               href="{% url 'products:list' %}?brand={{ b.slug }}{% if query %}&q={{ query }}{% endif %}{% if active_category %}&cat={{ active_category }}{% endif %}{% if sort %}&sort={{ sort }}{% endif %}">
-              {{ b.name }}
-            </a>
-          {% empty %}
-            <div class="p-3 text-muted">{% trans "برندی ثبت نشده." %}</div>
-          {% endfor %}
+          </form>
         </div>
       </div>
     </aside>
 
-    <!-- Products + Sort -->
-    <main class="col-12 col-lg-9">
-      <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
-        <h5 class="mb-0">{% trans "محصولات" %}</h5>
-        <form method="get" class="d-flex align-items-center gap-2">
-          {# نگه داشتن سایر پارامترها هنگام تغییر sort #}
-          {% if query %}<input type="hidden" name="q" value="{{ query }}">{% endif %}
-          {% if active_brand %}<input type="hidden" name="brand" value="{{ active_brand }}">{% endif %}
-          {% if active_category %}<input type="hidden" name="cat" value="{{ active_category }}">{% endif %}
-
-          <label class="text-muted small">{% trans "مرتب‌سازی" %}</label>
-          <select name="sort" class="form-select" onchange="this.form.submit()">
-            <option value="new" {% if not sort or sort == 'new' %}selected{% endif %}>{% trans "جدیدترین" %}</option>
-            <option value="price_asc" {% if sort == 'price_asc' %}selected{% endif %}>{% trans "ارزان‌ترین" %}</option>
-            <option value="price_desc" {% if sort == 'price_desc' %}selected{% endif %}>{% trans "گران‌ترین" %}</option>
+    <!-- Product Grid -->
+    <main class="col-md-9">
+      <!-- Sort Bar -->
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 class="mb-0">محصولات</h5>
+        <form method="get" class="d-flex align-items-center">
+          {% for k,v in request.GET.items %}
+            {% if k != 'sort' and k != 'page' %}
+              <input type="hidden" name="{{ k }}" value="{{ v }}">
+            {% endif %}
+          {% endfor %}
+          <label class="me-2">مرتب‌سازی:</label>
+          <select name="sort" class="form-select form-select-sm" onchange="this.form.submit()">
+            <option value="newest"     {% if sort == "newest" %}selected{% endif %}>جدیدترین</option>
+            <option value="price_asc"  {% if sort == "price_asc" %}selected{% endif %}>ارزان‌ترین</option>
+            <option value="price_desc" {% if sort == "price_desc" %}selected{% endif %}>گران‌ترین</option>
+            <option value="name"       {% if sort == "name" %}selected{% endif %}>نام (الفبا)</option>
           </select>
         </form>
       </div>
 
-      {% if products %}
-        <div class="row g-4">
-          {% for p in products %}
-            <div class="col-6 col-md-4">
-              <div class="card h-100 shadow-sm">
-                <a href="{% url 'products:detail' p.slug %}" class="text-decoration-none">
-                  {% if p.image %}
-                    <img src="{{ p.image.url }}" class="card-img-top" style="object-fit:cover;height:220px" alt="{{ p.name }}">
+      <!-- Grid -->
+      <div class="row g-3">
+        {% for p in products %}
+          <div class="col-6 col-md-4">
+            <div class="card h-100 d-flex flex-column">
+              <a href="{{ p.get_absolute_url }}">
+                {% with img=p.images.first %}
+                  {% if img %}
+                    <img src="{{ img.image.url }}" class="card-img-top" alt="{{ img.alt_text|default:p.name }}">
+                  {% elif p.image %}
+                    <img src="{{ p.image.url }}" class="card-img-top" alt="{{ p.name }}">
                   {% else %}
-                    <div class="bg-light d-flex align-items-center justify-content-center" style="height:220px">No Image</div>
+                    <img src="{% static 'img/placeholder.png' %}" class="card-img-top" alt="{{ p.name }}">
                   {% endif %}
-                </a>
-                <div class="card-body d-flex flex-column">
-                  <h6 class="card-title mb-1 text-truncate">{{ p.name }}</h6>
-                  <small class="text-muted mb-2">{{ p.brand.name }}</small>
+                {% endwith %}
+              </a>
+              <div class="card-body d-flex flex-column">
+                <h6 class="card-title mb-2">
+                  <a class="text-decoration-none text-dark" href="{{ p.get_absolute_url }}">{{ p.name }}</a>
+                </h6>
+
+                <div class="mb-3">
                   {% if p.discount_price %}
-                    <div class="mt-auto">
-                      <div class="fw-bold fs-6">{{ p.discount_price }} <span class="text-muted">تومان</span></div>
-                      <div class="text-decoration-line-through text-muted">{{ p.price }}</div>
-                    </div>
+                    <div><del class="text-muted small">{{ p.price|floatformat:0 }}</del></div>
+                    <div class="fw-bold">{{ p.discount_price|floatformat:0 }} تومان</div>
                   {% else %}
-                    <div class="mt-auto fw-bold fs-6">{{ p.price }} <span class="text-muted">تومان</span></div>
+                    <div class="fw-bold">{{ p.price|floatformat:0 }} تومان</div>
                   {% endif %}
                 </div>
-                <div class="card-footer bg-white">
-                  <a class="btn btn-sm btn-primary w-100" href="{% url 'products:detail' p.slug %}">{% trans "مشاهده" %}</a>
+
+                <!-- دکمه مشاهده محصول -->
+                <div class="mt-auto">
+                  <a href="{{ p.get_absolute_url }}" class="btn btn-primary w-100">مشاهده محصول</a>
                 </div>
               </div>
             </div>
-          {% endfor %}
-        </div>
+          </div>
+        {% empty %}
+          <div class="col-12">
+            <div class="alert alert-info">محصولی یافت نشد.</div>
+          </div>
+        {% endfor %}
+      </div>
 
-        <!-- Pagination -->
+      <!-- Pagination -->
+      {% if products.paginator.num_pages > 1 %}
         <nav class="mt-4">
           <ul class="pagination justify-content-center">
-            {% with params="q="|add:query|urlencode %}
-              {% if active_brand %}{% firstof params "" %}{% endif %}
-            {% endwith %}
             {% if products.has_previous %}
               <li class="page-item">
-                <a class="page-link" href="?page={{ products.previous_page_number }}{% if query %}&q={{ query|urlencode }}{% endif %}{% if active_brand %}&brand={{ active_brand }}{% endif %}{% if active_category %}&cat={{ active_category }}{% endif %}{% if sort %}&sort={{ sort }}{% endif %}">&laquo;</a>
+                <a class="page-link" href="?{% if querystring %}{{ querystring }}&{% endif %}page={{ products.previous_page_number }}">«</a>
               </li>
-            {% else %}
-              <li class="page-item disabled"><span class="page-link">&laquo;</span></li>
             {% endif %}
-
-            {% for num in products.paginator.page_range %}
-              {% if num == products.number %}
-                <li class="page-item active"><span class="page-link">{{ num }}</span></li>
-              {% else %}
-                <li class="page-item">
-                  <a class="page-link" href="?page={{ num }}{% if query %}&q={{ query|urlencode }}{% endif %}{% if active_brand %}&brand={{ active_brand }}{% endif %}{% if active_category %}&cat={{ active_category }}{% endif %}{% if sort %}&sort={{ sort }}{% endif %}">{{ num }}</a>
-                </li>
-              {% endif %}
+            {% for i in products.paginator.page_range %}
+              <li class="page-item {% if products.number == i %}active{% endif %}">
+                <a class="page-link" href="?{% if querystring %}{{ querystring }}&{% endif %}page={{ i }}">{{ i }}</a>
+              </li>
             {% endfor %}
-
             {% if products.has_next %}
               <li class="page-item">
-                <a class="page-link" href="?page={{ products.next_page_number }}{% if query %}&q={{ query|urlencode }}{% endif %}{% if active_brand %}&brand={{ active_brand }}{% endif %}{% if active_category %}&cat={{ active_category }}{% endif %}{% if sort %}&sort={{ sort }}{% endif %}">&raquo;</a>
+                <a class="page-link" href="?{% if querystring %}{{ querystring }}&{% endif %}page={{ products.next_page_number }}">»</a>
               </li>
-            {% else %}
-              <li class="page-item disabled"><span class="page-link">&raquo;</span></li>
             {% endif %}
           </ul>
         </nav>
-      {% else %}
-        <div class="alert alert-info">{% trans "محصولی یافت نشد." %}</div>
       {% endif %}
     </main>
   </div>

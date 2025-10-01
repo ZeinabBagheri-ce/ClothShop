@@ -1,0 +1,689 @@
+{% extends "_base.html" %} {% load i18n %} {% block title %}{% trans "داشبورد
+کارکنان" %}{% endblock %} {% block css %}
+<style>
+  .admin-shell {
+    display: grid;
+    grid-template-columns: 260px 1fr;
+    gap: 1.25rem;
+  }
+  .admin-side {
+    background: #0d6efd;
+    color: #fff;
+    border-radius: 12px;
+    padding: 1rem;
+  }
+  .admin-side .brand {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+  }
+  .admin-side .brand .avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: #fff2;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+  }
+  .admin-side .nav {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  .admin-side .nav li {
+    margin: 0.25rem 0;
+  }
+  .admin-side .nav a {
+    color: #fff;
+    text-decoration: none;
+    display: block;
+    padding: 0.5rem 0.75rem;
+    border-radius: 8px;
+  }
+  .admin-side .nav a:hover,
+  .admin-side .nav a.active {
+    background: #ffffff22;
+  }
+  .admin-main .section {
+    margin-bottom: 1.25rem;
+    border-radius: 12px;
+    overflow: hidden;
+    border: 1px solid #e5e7eb;
+  }
+  .section .section-hd {
+    background: #f8fafc;
+    padding: 0.75rem 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .section .section-bd {
+    padding: 1rem;
+    background: #fff;
+  }
+  .muted {
+    color: #6b7280;
+    font-size: 0.875rem;
+  }
+  .pill {
+    border-radius: 999px;
+    padding: 0.15rem 0.55rem;
+    font-size: 0.75rem;
+  }
+  .pill.ok {
+    background: #dcfce7;
+    color: #166534;
+  }
+  .pill.muted {
+    background: #f3f4f6;
+    color: #374151;
+  }
+  .tag {
+    display: inline-block;
+    background: #eef2ff;
+    color: #3730a3;
+    font-size: 0.75rem;
+    border-radius: 999px;
+    padding: 0.15rem 0.5rem;
+    margin-inline-start: 0.5rem;
+  }
+  .toggle-btn {
+    border: none;
+    background: #eef2ff;
+    border-radius: 6px;
+    padding: 0.25rem 0.5rem;
+  }
+  .create-box {
+    display: none;
+    background: #fafafa;
+    border: 1px dashed #cbd5e1;
+    padding: 1rem;
+    border-radius: 8px;
+  }
+  .admin-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+  .admin-tabs .tab-link {
+    border: 1px solid #e5e7eb;
+    background: #fff;
+    padding: 0.35rem 0.75rem;
+    border-radius: 8px;
+    text-decoration: none;
+    color: #111;
+  }
+  .admin-tabs .tab-link.active {
+    background: #0d6efd;
+    color: #fff;
+  }
+  .table thead th {
+    white-space: nowrap;
+  }
+  .table td,
+  .table th {
+    vertical-align: middle;
+  }
+  @media (max-width: 992px) {
+    .admin-shell {
+      grid-template-columns: 1fr;
+    }
+    .admin-side {
+      order: 2;
+    }
+  }
+</style>
+{% endblock %} {% block content %}
+<div class="container my-4 admin-shell">
+  <!-- Sidebar -->
+  <aside class="admin-side">
+    <div class="brand">
+      <div class="avatar">
+        {{ request.user.first_name|default:request.user.username|first|upper }}
+      </div>
+      <div>
+        <div class="fw-semibold">
+          {{ request.user.get_full_name|default:request.user.username }}
+        </div>
+        <div class="muted">{% trans "کاربرِ کارکنان (Staff)" %}</div>
+      </div>
+    </div>
+    <ul class="nav">
+      <li><a href="#sec-products" class="active">{% trans "محصولات" %}</a></li>
+      <li><a href="#sec-variations">{% trans "واریانت‌ها" %}</a></li>
+      <li><a href="#sec-orders">{% trans "سفارش‌ها" %}</a></li>
+      <li>
+        <a href="{% url 'accounts:profile_user' %}"
+          >{% trans "پروفایل شخصی" %}</a
+        >
+      </li>
+    </ul>
+  </aside>
+
+  <!-- Main -->
+  <main class="admin-main">
+    {% if messages %} {% for m in messages %}
+    <div class="alert alert-{{ m.tags }}">{{ m }}</div>
+    {% endfor %} {% endif %}
+
+    <!-- PRODUCTS -->
+    <section id="sec-products" class="section">
+      <div class="section-hd">
+        <div class="fw-semibold">{% trans "محصولات" %}</div>
+        <div class="muted">{% trans "مدیریت داده‌های پایه و محصول" %}</div>
+      </div>
+      <div class="section-bd">
+        <!-- tabs -->
+        <div class="admin-tabs mb-3" id="products-tabs">
+          <a href="#tab-brands" class="tab-link active"
+            >{% trans "برندها" %}
+            <span class="tag"
+              >{{ sidebar_counts.products.brands|default:0 }}</span
+            ></a
+          >
+          <a href="#tab-cats" class="tab-link"
+            >{% trans "دسته‌بندی‌ها" %}
+            <span class="tag"
+              >{{ sidebar_counts.products.categories|default:0 }}</span
+            ></a
+          >
+          <a href="#tab-colors" class="tab-link"
+            >{% trans "رنگ‌ها" %}
+            <span class="tag"
+              >{{ sidebar_counts.products.colors|default:0 }}</span
+            ></a
+          >
+          <a href="#tab-sizes" class="tab-link"
+            >{% trans "سایزها" %}
+            <span class="tag"
+              >{{ sidebar_counts.products.sizes|default:0 }}</span
+            ></a
+          >
+          <a href="#tab-products" class="tab-link"
+            >{% trans "محصولات" %}
+            <span class="tag"
+              >{{ sidebar_counts.products.products|default:0 }}</span
+            ></a
+          >
+        </div>
+
+        <!-- BRANDS -->
+        <div id="tab-brands" class="tab-pane">
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <h6 class="m-0">{% trans "برندها" %}</h6>
+            <button class="toggle-btn" data-target="#create-brand">
+              {% trans "افزودن برند جدید" %} +
+            </button>
+          </div>
+          <div id="create-brand" class="create-box mb-3">
+            <form method="post" class="row g-3">
+              {% csrf_token %}
+              <input type="hidden" name="context" value="staff" />
+              <input type="hidden" name="action" value="add_brand" />
+              {{ brand_qf.as_p }}
+              <div>
+                <button class="btn btn-primary">{% trans "ثبت برند" %}</button>
+              </div>
+            </form>
+          </div>
+          <div class="table-responsive">
+            <table class="table table-sm align-middle">
+              <thead class="table-light">
+                <tr>
+                  <th>#</th>
+                  <th>{% trans "نام" %}</th>
+                  <th>{% trans "نامک" %}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for b in staff_brands %}
+                <tr>
+                  <td>{{ b.id }}</td>
+                  <td class="fw-semibold">{{ b.name }}</td>
+                  <td class="text-muted">{{ b.slug }}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                  <td colspan="3" class="text-center text-muted">
+                    {% trans "موردی نیست." %}
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- CATEGORIES -->
+        <div id="tab-cats" class="tab-pane" style="display: none">
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <h6 class="m-0">{% trans "دسته‌بندی‌ها" %}</h6>
+            <button class="toggle-btn" data-target="#create-cat">
+              {% trans "افزودن دسته‌بندی جدید" %} +
+            </button>
+          </div>
+          <div id="create-cat" class="create-box mb-3">
+            <form method="post" class="row g-3">
+              {% csrf_token %}
+              <input type="hidden" name="context" value="staff" />
+              <input type="hidden" name="action" value="add_category" />
+              {{ category_qf.as_p }}
+              <div>
+                <button class="btn btn-primary">
+                  {% trans "ثبت دسته‌بندی" %}
+                </button>
+              </div>
+            </form>
+          </div>
+          <div class="table-responsive">
+            <table class="table table-sm align-middle">
+              <thead class="table-light">
+                <tr>
+                  <th>#</th>
+                  <th>{% trans "نام" %}</th>
+                  <th>{% trans "والد" %}</th>
+                  <th>{% trans "وضعیت" %}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for c in staff_categories %}
+                <tr>
+                  <td>{{ c.id }}</td>
+                  <td class="fw-semibold">{{ c.name }}</td>
+                  <td>{{ c.parent.name|default:"-" }}</td>
+                  <td>
+                    {% if c.is_active %}<span class="pill ok"
+                      >{% trans "فعال" %}</span
+                    >{% else %}<span class="pill muted"
+                      >{% trans "غیرفعال" %}</span
+                    >{% endif %}
+                  </td>
+                </tr>
+                {% empty %}
+                <tr>
+                  <td colspan="4" class="text-center text-muted">
+                    {% trans "موردی نیست." %}
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- COLORS -->
+        <div id="tab-colors" class="tab-pane" style="display: none">
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <h6 class="m-0">{% trans "رنگ‌ها" %}</h6>
+            <button class="toggle-btn" data-target="#create-color">
+              {% trans "افزودن رنگ جدید" %} +
+            </button>
+          </div>
+          <div id="create-color" class="create-box mb-3">
+            <form method="post" class="row g-3">
+              {% csrf_token %}
+              <input type="hidden" name="context" value="staff" />
+              <input type="hidden" name="action" value="add_color" />
+              {{ color_qf.as_p }}
+              <div>
+                <button class="btn btn-primary">{% trans "ثبت رنگ" %}</button>
+              </div>
+            </form>
+          </div>
+          <div class="table-responsive">
+            <table class="table table-sm align-middle">
+              <thead class="table-light">
+                <tr>
+                  <th>#</th>
+                  <th>{% trans "نام" %}</th>
+                  <th>{% trans "کد" %}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for c in staff_colors %}
+                <tr>
+                  <td>{{ c.id }}</td>
+                  <td class="fw-semibold">{{ c.name }}</td>
+                  <td>{{ c.code|default:c.hex_code|default:"-" }}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                  <td colspan="3" class="text-center text-muted">
+                    {% trans "موردی نیست." %}
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- SIZES -->
+        <div id="tab-sizes" class="tab-pane" style="display: none">
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <h6 class="m-0">{% trans "سایزها" %}</h6>
+            <button class="toggle-btn" data-target="#create-size">
+              {% trans "افزودن سایز جدید" %} +
+            </button>
+          </div>
+          <div id="create-size" class="create-box mb-3">
+            <form method="post" class="row g-3">
+              {% csrf_token %}
+              <input type="hidden" name="context" value="staff" />
+              <input type="hidden" name="action" value="add_size" />
+              {{ size_qf.as_p }}
+              <div>
+                <button class="btn btn-primary">{% trans "ثبت سایز" %}</button>
+              </div>
+            </form>
+          </div>
+          <div class="table-responsive">
+            <table class="table table-sm align-middle">
+              <thead class="table-light">
+                <tr>
+                  <th>#</th>
+                  <th>{% trans "نام" %}</th>
+                  <th>{% trans "ترتیب" %}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for s in staff_sizes %}
+                <tr>
+                  <td>{{ s.id }}</td>
+                  <td class="fw-semibold">{{ s.name }}</td>
+                  <td>{{ s.sort_order }}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                  <td colspan="3" class="text-center text-muted">
+                    {% trans "موردی نیست." %}
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- PRODUCTS -->
+        <div id="tab-products" class="tab-pane" style="display: none">
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <h6 class="m-0">{% trans "محصولات" %}</h6>
+            <button class="toggle-btn" data-target="#create-product">
+              {% trans "افزودن محصول جدید" %} +
+            </button>
+          </div>
+
+          <div id="create-product" class="create-box mb-3">
+            <form method="post" enctype="multipart/form-data" class="row g-3">
+              {% csrf_token %}
+              <input type="hidden" name="context" value="staff" />
+              <input type="hidden" name="action" value="add_product" />
+              {{ product_qf.as_p }}
+              <div>
+                <button class="btn btn-primary">{% trans "ثبت محصول" %}</button>
+              </div>
+            </form>
+          </div>
+
+          <div class="table-responsive">
+            <table class="table table-sm align-middle">
+              <thead class="table-light">
+                <tr>
+                  <th>#</th>
+                  <th>{% trans "نام" %}</th>
+                  <th>{% trans "برند" %}</th>
+                  <th>{% trans "دسته" %}</th>
+                  <th>{% trans "قیمت" %}</th>
+                  <th>{% trans "وضعیت" %}</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for p in staff_products %}
+                <tr>
+                  <td>{{ p.id }}</td>
+                  <td class="fw-semibold">
+                    <a href="{{ p.get_absolute_url }}" target="_blank"
+                      >{{ p.name }}</a
+                    >
+                  </td>
+                  <td>{{ p.brand.name|default:"—" }}</td>
+                  <td>{{ p.category.name|default:"—" }}</td>
+                  <td>
+                    {% if p.discount_price %}<del class="text-muted"
+                      >{{ p.price }}</del
+                    >
+                    <strong>{{ p.discount_price }}</strong>{% else %}{{ p.price
+                    }}{% endif %}
+                  </td>
+                  <td>
+                    {% if p.is_active %}<span class="pill ok"
+                      >{% trans "فعال" %}</span
+                    >{% else %}<span class="pill muted"
+                      >{% trans "غیرفعال" %}</span
+                    >{% endif %}
+                  </td>
+                  <td class="text-end">
+                    <form method="post" class="d-inline">
+                      {% csrf_token %}
+                      <input type="hidden" name="context" value="staff" />
+                      <input
+                        type="hidden"
+                        name="action"
+                        value="delete_product"
+                      />
+                      <input
+                        type="hidden"
+                        name="product_id"
+                        value="{{ p.id }}"
+                      />
+                      <button class="btn btn-sm btn-outline-danger">
+                        {% trans "حذف" %}
+                      </button>
+                    </form>
+                  </td>
+                </tr>
+                {% empty %}
+                <tr>
+                  <td colspan="7" class="text-center text-muted">
+                    {% trans "چیزی برای نمایش نیست." %}
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- VARIATIONS -->
+    <section id="sec-variations" class="section">
+      <div class="section-hd">
+        <div class="fw-semibold">{% trans "واریانت‌ها" %}</div>
+        <div class="muted">{% trans "۵۰ مورد آخر" %}</div>
+      </div>
+      <div class="section-bd">
+        <div class="table-responsive">
+          <table class="table table-sm align-middle">
+            <thead class="table-light">
+              <tr>
+                <th>#</th>
+                <th>{% trans "محصول" %}</th>
+                <th>SKU</th>
+                <th>{% trans "رنگ" %}</th>
+                <th>{% trans "سایز" %}</th>
+                <th>{% trans "قیمت نهایی" %}</th>
+                <th>{% trans "موجودی" %}</th>
+                <th>{% trans "وضعیت" %}</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for v in staff_variations %}
+              <tr>
+                <td>{{ v.id }}</td>
+                <td>
+                  <a href="{{ v.product.get_absolute_url }}" target="_blank"
+                    >{{ v.product.name }}</a
+                  >
+                </td>
+                <td class="fw-semibold">{{ v.sku }}</td>
+                <td>{{ v.color.name|default:"—" }}</td>
+                <td>{{ v.size.name|default:"—" }}</td>
+                <td>{{ v.final_price }}</td>
+                <td>{{ v.stock }}</td>
+                <td>
+                  {% if v.is_active %}<span class="pill ok"
+                    >{% trans "فعال" %}</span
+                  >{% else %}<span class="pill muted"
+                    >{% trans "غیرفعال" %}</span
+                  >{% endif %}
+                </td>
+                <td class="text-end">
+                  <form method="post" class="d-inline">
+                    {% csrf_token %}
+                    <input type="hidden" name="context" value="staff" />
+                    <input
+                      type="hidden"
+                      name="action"
+                      value="delete_variation"
+                    />
+                    <input
+                      type="hidden"
+                      name="variation_id"
+                      value="{{ v.id }}"
+                    />
+                    <button class="btn btn-sm btn-outline-danger">
+                      {% trans "حذف" %}
+                    </button>
+                  </form>
+                </td>
+              </tr>
+              {% empty %}
+              <tr>
+                <td colspan="9" class="text-center text-muted">
+                  {% trans "چیزی برای نمایش نیست." %}
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ORDERS -->
+    <section id="sec-orders" class="section">
+      <div class="section-hd">
+        <div class="fw-semibold">{% trans "سفارش‌ها" %}</div>
+        <div class="muted">{% trans "۵۰ مورد آخر تمام مشتریان" %}</div>
+      </div>
+      <div class="section-bd">
+        <div class="table-responsive">
+          <table class="table table-sm align-middle">
+            <thead class="table-light">
+              <tr>
+                <th>#</th>
+                <th>{% trans "کاربر" %}</th>
+                <th>{% trans "تاریخ" %}</th>
+                <th>{% trans "مبلغ" %}</th>
+                <th>{% trans "آیتم‌ها" %}</th>
+                <th style="min-width: 220px">{% trans "تغییر وضعیت" %}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for o in admin_orders %}
+              <tr>
+                <td>{{ o.id }}</td>
+                <td>{{ o.user.get_full_name|default:o.user.username }}</td>
+                <td>{{ o.created_at|date:"Y/m/d H:i" }}</td>
+                <td>{{ o.total }}</td>
+                <td>
+                  {% for it in o.items.all %}
+                  <div class="small">
+                    {{ it.product_name }} — {{ it.sku }}
+                    <span class="text-muted">× {{ it.quantity }}</span>
+                  </div>
+                  {% endfor %}
+                </td>
+                <td>
+                  <form
+                    method="post"
+                    class="d-flex gap-2"
+                    action="{% url 'accounts:staff_set_order_status' o.id %}"
+                  >
+                    {% csrf_token %}
+                    <select
+                      name="status"
+                      class="form-select form-select-sm"
+                      style="max-width: 220px"
+                    >
+                      {% for val,label in order_status_choices %}
+                      <option
+                        value="{{ val }}"
+                        {%
+                        if
+                        val=""
+                        ="o.status"
+                        %}selected{%
+                        endif
+                        %}
+                      >
+                        {{ label }}
+                      </option>
+                      {% endfor %}
+                    </select>
+                    <button class="btn btn-sm btn-primary">
+                      {% trans "ذخیره" %}
+                    </button>
+                  </form>
+                </td>
+              </tr>
+              {% empty %}
+              <tr>
+                <td colspan="6" class="text-center text-muted">
+                  {% trans "سفارشی یافت نشد." %}
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<script>
+  // تب‌های بخش محصولات
+  (function () {
+    const links = document.querySelectorAll("#products-tabs .tab-link");
+    const panes = document.querySelectorAll(".tab-pane");
+    links.forEach((link) => {
+      link.addEventListener("click", function (e) {
+        e.preventDefault();
+        links.forEach((l) => l.classList.remove("active"));
+        this.classList.add("active");
+        const target = this.getAttribute("href");
+        panes.forEach((p) => {
+          p.style.display = "#" + p.id === target ? "block" : "none";
+        });
+      });
+    });
+  })();
+
+  // باز/بستن جعبه‌های ایجاد (+)
+  document.querySelectorAll(".toggle-btn").forEach((btn) => {
+    btn.addEventListener("click", function () {
+      const t = document.querySelector(this.dataset.target);
+      if (!t) return;
+      t.style.display = t.style.display === "block" ? "none" : "block";
+    });
+  });
+</script>
+{% endblock %}

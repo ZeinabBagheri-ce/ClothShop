@@ -1,0 +1,29 @@
+{% extends "_base.html" %} {% load i18n %} {% block title %}پرداخت (شبیه‌ساز){%
+endblock %} {% block content %}
+<div class="container my-5" style="max-width: 720px">
+  <div class="card">
+    <div class="card-header fw-semibold">صفحه شبیه‌ساز درگاه پرداخت</div>
+    <div class="card-body">
+      <p class="mb-3">سفارش #{{ payment.order.id }}</p>
+      <p class="mb-4">
+        مبلغ قابل پرداخت: <strong>{{ payment.amount }}</strong> تومان
+      </p>
+
+      <div class="d-flex gap-2">
+        <a class="btn btn-success" href="{{ callback_url_success }}"
+          >پرداخت موفق</a
+        >
+        <a class="btn btn-outline-danger" href="{{ callback_url_failed }}"
+          >پرداخت ناموفق</a
+        >
+      </div>
+
+      <hr />
+      <p class="text-muted small mb-0">
+        این صفحه فقط برای تست جریان پرداخت است. در اتصال واقعی، کاربر به درگاه
+        بانکی هدایت شده و سپس به آدرس callback برمی‌گردد.
+      </p>
+    </div>
+  </div>
+</div>
+{% endblock %}

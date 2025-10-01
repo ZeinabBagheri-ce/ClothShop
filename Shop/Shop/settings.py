@@ -38,9 +38,13 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    "django.contrib.humanize",
     'accounts.apps.AccountsConfig',
     'home.apps.HomeConfig',
     'products.apps.ProductsConfig',
+    'cart.apps.CartConfig',
+    'orders.apps.OrdersConfig',
+    'payments.apps.PaymentsConfig',
 
 ]
 
@@ -66,11 +70,13 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
-                'products.context_processors.top_categories',
+                'cart.context_processors.cart_summary',
+                'products.context_processors.nav_categories',
             ],
         },
     },
 ]
+
 
 WSGI_APPLICATION = 'Shop.wsgi.application'
 
@@ -121,6 +127,12 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
 STATIC_URL = 'static/'
+STATICFILES_DIRS = [
+    BASE_DIR / "static",
+
+]
+
+STATIC_ROOT = BASE_DIR / "staticfiles"
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
@@ -135,3 +147,12 @@ AUTHENTICATION_BACKENDS = ["django.contrib.auth.backends.ModelBackend"]
 
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
+
+
+
+ZARINPAL_MERCHANT_ID = "XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX"
+ZARINPAL_CALLBACK_URL = "http://127.0.0.1:8000/payments/zarinpal/callback/"
+ZARINPAL_GATEWAY_URL = "https://sandbox.zarinpal.com/pg/StartPay/"
+ZARINPAL_REQUEST_URL = "https://sandbox.zarinpal.com/pg/rest/WebGate/PaymentRequest.json"
+ZARINPAL_VERIFY_URL  = "https://sandbox.zarinpal.com/pg/rest/WebGate/PaymentVerification.json"
+
