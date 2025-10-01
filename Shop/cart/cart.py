@@ -3,6 +3,7 @@ from products.models import ProductVariation
 
 CART_SESSION_ID = "cart"
 
+
 class Cart:
     def __init__(self, request):
         self.session = request.session
@@ -18,7 +19,9 @@ class Cart:
         vid = str(variation_id)
         if vid not in self.cart:
             self.cart[vid] = {"quantity": 0}
-        self.cart[vid]["quantity"] = quantity if replace else self.cart[vid]["quantity"] + quantity
+        self.cart[vid]["quantity"] = (
+            quantity if replace else self.cart[vid]["quantity"] + quantity
+        )
         if self.cart[vid]["quantity"] <= 0:
             self.remove(vid)
         self.save()
@@ -35,7 +38,9 @@ class Cart:
 
     def __iter__(self):
         ids = [int(vid) for vid in self.cart.keys()]
-        variations = ProductVariation.objects.select_related("product", "color", "size").filter(id__in=ids)
+        variations = ProductVariation.objects.select_related(
+            "product", "color", "size"
+        ).filter(id__in=ids)
         vmap = {v.id: v for v in variations}
         for vid, item in self.cart.items():
             v = vmap.get(int(vid))

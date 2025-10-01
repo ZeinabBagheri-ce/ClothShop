@@ -10,9 +10,11 @@ from django.contrib.auth.decorators import login_required
 from orders.models import Order
 from .models import Payment
 
+
 def _to_rial(amount_decimal: Decimal) -> int:
 
     return int(Decimal(amount_decimal) * 10)
+
 
 @login_required
 @transaction.atomic
@@ -23,14 +25,12 @@ def zarinpal_start(request, order_id: int):
         messages.info(request, "مبلغ سفارش صفر است.")
         return redirect("orders:success", order_id=order.id)
 
-
     if hasattr(order, "payment") and order.payment.status == Payment.Status.SUCCESS:
         messages.info(request, "این سفارش قبلاً پرداخت شده است.")
         return redirect("orders:success", order_id=order.id)
 
     payment, _ = Payment.objects.get_or_create(
-        order=order,
-        defaults={"user": request.user, "amount": order.total}
+        order=order, defaults={"user": request.user, "amount": order.total}
     )
     payment.amount = order.total
     payment.status = Payment.Status.STARTED
@@ -38,7 +38,9 @@ def zarinpal_start(request, order_id: int):
 
     data = {
         "MerchantID": settings.ZARINPAL_MERCHANT_ID,
-        "Amount": _to_rial(order.total),  # اگر قیمت‌ها ریال هستند، همین order.total را int کن
+        "Amount": _to_rial(
+            order.total
+        ),  # اگر قیمت‌ها ریال هستند، همین order.total را int کن
         "Description": f"Order #{order.id}",
         "CallbackURL": settings.ZARINPAL_CALLBACK_URL,
         "Email": request.user.email or "",
@@ -46,7 +48,9 @@ def zarinpal_start(request, order_id: int):
     headers = {"accept": "application/json", "content-type": "application/json"}
 
     try:
-        resp = requests.post(settings.ZARINPAL_REQUEST_URL, json=data, headers=headers, timeout=15)
+        resp = requests.post(
+            settings.ZARINPAL_REQUEST_URL, json=data, headers=headers, timeout=15
+        )
         payload = resp.json()
     except Exception as e:
         messages.error(request, f"خطا در اتصال به زرین‌پال: {e}")
@@ -60,6 +64,7 @@ def zarinpal_start(request, order_id: int):
 
     messages.error(request, f"خطای زرین‌پال (PaymentRequest): {payload.get('Status')}")
     return redirect("orders:success", order_id=order.id)
+
 
 @login_required
 @transaction.atomic
@@ -83,7 +88,9 @@ def zarinpal_callback(request):
     headers = {"accept": "application/json", "content-type": "application/json"}
 
     try:
-        resp = requests.post(settings.ZARINPAL_VERIFY_URL, json=data, headers=headers, timeout=15)
+        resp = requests.post(
+            settings.ZARINPAL_VERIFY_URL, json=data, headers=headers, timeout=15
+        )
         payload = resp.json()
     except Exception as e:
         messages.error(request, f"خطا در ارتباط با زرین‌پال (Verify): {e}")

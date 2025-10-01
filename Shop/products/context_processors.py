@@ -1,6 +1,6 @@
-# products/context_processors.py
 from django.db.models import Prefetch
 from .models import Category
+
 
 def nav_categories(request):
     """
@@ -10,17 +10,16 @@ def nav_categories(request):
       - top_categories برای سازگاری با کدهای قدیمی
     """
     roots = (
-        Category.objects
-        .filter(is_active=True, parent__isnull=True)
+        Category.objects.filter(is_active=True, parent__isnull=True)
         .prefetch_related(
             Prefetch(
                 "children",
-                queryset=Category.objects.filter(is_active=True).order_by("name")
+                queryset=Category.objects.filter(is_active=True).order_by("name"),
             )
         )
         .order_by("name")
     )
     return {"nav_categories": roots, "top_categories": roots}
 
-# سازگاری با settings قدیمی که به products.context_processors.top_categories اشاره می‌کند:
+
 top_categories = nav_categories

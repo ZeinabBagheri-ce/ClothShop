@@ -4,6 +4,7 @@ from django.utils.translation import gettext_lazy as _
 from django.utils import timezone
 from products.models import ProductVariation
 
+
 class Order(models.Model):
     class Status(models.TextChoices):
         PENDING = "pending", _("در انتظار پرداخت")
@@ -11,9 +12,17 @@ class Order(models.Model):
         CANCELED = "canceled", _("لغو شده")
         SHIPPED = "shipped", _("ارسال شده")
 
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
-                             null=True, blank=True, related_name="orders", verbose_name=_("کاربر"))
-    status = models.CharField(_("وضعیت"), max_length=16, choices=Status.choices, default=Status.PENDING)
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="orders",
+        verbose_name=_("کاربر"),
+    )
+    status = models.CharField(
+        _("وضعیت"), max_length=16, choices=Status.choices, default=Status.PENDING
+    )
 
     full_name = models.CharField(_("نام و نام‌خانوادگی"), max_length=100)
     phone = models.CharField(_("تلفن"), max_length=20, blank=True)
@@ -24,9 +33,15 @@ class Order(models.Model):
 
     note = models.TextField(_("توضیحات سفارش"), blank=True)
 
-    subtotal = models.DecimalField(_("جمع جزء"), max_digits=12, decimal_places=2, default=0)
-    shipping_cost = models.DecimalField(_("هزینه ارسال"), max_digits=12, decimal_places=2, default=0)
-    total = models.DecimalField(_("مبلغ نهایی"), max_digits=12, decimal_places=2, default=0)
+    subtotal = models.DecimalField(
+        _("جمع جزء"), max_digits=12, decimal_places=2, default=0
+    )
+    shipping_cost = models.DecimalField(
+        _("هزینه ارسال"), max_digits=12, decimal_places=2, default=0
+    )
+    total = models.DecimalField(
+        _("مبلغ نهایی"), max_digits=12, decimal_places=2, default=0
+    )
 
     created_at = models.DateTimeField(_("تاریخ ایجاد"), default=timezone.now)
 
@@ -38,9 +53,12 @@ class Order(models.Model):
     def __str__(self):
         return f"Order #{self.id} - {self.get_status_display()}"
 
+
 class OrderItem(models.Model):
     order = models.ForeignKey(Order, related_name="items", on_delete=models.CASCADE)
-    variation = models.ForeignKey(ProductVariation, on_delete=models.PROTECT, related_name="+")
+    variation = models.ForeignKey(
+        ProductVariation, on_delete=models.PROTECT, related_name="+"
+    )
     product_name = models.CharField(_("نام محصول"), max_length=200)  # snapshot
     sku = models.CharField(_("SKU"), max_length=40)
     price = models.DecimalField(_("قیمت واحد"), max_digits=12, decimal_places=2)
@@ -54,13 +72,19 @@ class OrderItem(models.Model):
 class Coupon(models.Model):
     code = models.CharField(_("کد"), max_length=40, unique=True)
     percent_off = models.PositiveIntegerField(_("درصد تخفیف"), null=True, blank=True)
-    amount_off = models.DecimalField(_("تخفیف مبلغی"), max_digits=12, decimal_places=2, null=True, blank=True)
+    amount_off = models.DecimalField(
+        _("تخفیف مبلغی"), max_digits=12, decimal_places=2, null=True, blank=True
+    )
     is_active = models.BooleanField(_("فعال"), default=True)
     starts_at = models.DateTimeField(_("شروع"), null=True, blank=True)
     ends_at = models.DateTimeField(_("پایان"), null=True, blank=True)
-    usage_limit = models.PositiveIntegerField(_("حداکثر دفعات مصرف"), null=True, blank=True)
+    usage_limit = models.PositiveIntegerField(
+        _("حداکثر دفعات مصرف"), null=True, blank=True
+    )
     used_count = models.PositiveIntegerField(_("دفعات مصرف شده"), default=0)
-    min_subtotal = models.DecimalField(_("حداقل جمع جزء"), max_digits=12, decimal_places=2, null=True, blank=True)
+    min_subtotal = models.DecimalField(
+        _("حداقل جمع جزء"), max_digits=12, decimal_places=2, null=True, blank=True
+    )
 
     class Meta:
         verbose_name = _("کوپن")
@@ -72,10 +96,14 @@ class Coupon(models.Model):
 
     def is_valid_now(self):
         now = timezone.now()
-        if not self.is_active: return False
-        if self.starts_at and now < self.starts_at: return False
-        if self.ends_at and now > self.ends_at: return False
-        if self.usage_limit is not None and self.used_count >= self.usage_limit: return False
+        if not self.is_active:
+            return False
+        if self.starts_at and now < self.starts_at:
+            return False
+        if self.ends_at and now > self.ends_at:
+            return False
+        if self.usage_limit is not None and self.used_count >= self.usage_limit:
+            return False
         return True
 
     def compute_discount(self, subtotal):
@@ -88,6 +116,7 @@ class Coupon(models.Model):
             discount += self.amount_off
         return min(discount, subtotal)
 
+
 class Order(models.Model):
     class Status(models.TextChoices):
         PENDING = "pending", _("در انتظار پرداخت")
@@ -95,9 +124,17 @@ class Order(models.Model):
         CANCELED = "canceled", _("لغو شده")
         SHIPPED = "shipped", _("ارسال شده")
 
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
-                             null=True, blank=True, related_name="orders", verbose_name=_("کاربر"))
-    status = models.CharField(_("وضعیت"), max_length=16, choices=Status.choices, default=Status.PENDING)
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="orders",
+        verbose_name=_("کاربر"),
+    )
+    status = models.CharField(
+        _("وضعیت"), max_length=16, choices=Status.choices, default=Status.PENDING
+    )
 
     full_name = models.CharField(_("نام و نام‌خانوادگی"), max_length=100)
     phone = models.CharField(_("تلفن"), max_length=20, blank=True)
@@ -108,10 +145,18 @@ class Order(models.Model):
 
     note = models.TextField(_("توضیحات سفارش"), blank=True)
 
-    subtotal = models.DecimalField(_("جمع جزء"), max_digits=12, decimal_places=2, default=0)
-    discount_amount = models.DecimalField(_("تخفیف"), max_digits=12, decimal_places=2, default=0)
-    shipping_cost = models.DecimalField(_("هزینه ارسال"), max_digits=12, decimal_places=2, default=0)
-    total = models.DecimalField(_("مبلغ نهایی"), max_digits=12, decimal_places=2, default=0)
+    subtotal = models.DecimalField(
+        _("جمع جزء"), max_digits=12, decimal_places=2, default=0
+    )
+    discount_amount = models.DecimalField(
+        _("تخفیف"), max_digits=12, decimal_places=2, default=0
+    )
+    shipping_cost = models.DecimalField(
+        _("هزینه ارسال"), max_digits=12, decimal_places=2, default=0
+    )
+    total = models.DecimalField(
+        _("مبلغ نهایی"), max_digits=12, decimal_places=2, default=0
+    )
     coupon_code = models.CharField(_("کد کوپن"), max_length=40, blank=True)
 
     created_at = models.DateTimeField(_("تاریخ ایجاد"), default=timezone.now)
@@ -124,9 +169,12 @@ class Order(models.Model):
     def __str__(self):
         return f"Order #{self.id} - {self.get_status_display()}"
 
+
 class OrderItem(models.Model):
     order = models.ForeignKey(Order, related_name="items", on_delete=models.CASCADE)
-    variation = models.ForeignKey(ProductVariation, on_delete=models.PROTECT, related_name="+")
+    variation = models.ForeignKey(
+        ProductVariation, on_delete=models.PROTECT, related_name="+"
+    )
     product_name = models.CharField(_("نام محصول"), max_length=200)
     sku = models.CharField(_("SKU"), max_length=40)
     price = models.DecimalField(_("قیمت واحد"), max_digits=12, decimal_places=2)

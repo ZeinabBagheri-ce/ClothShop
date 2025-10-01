@@ -1,4 +1,3 @@
-
 from decimal import Decimal
 from django.db import transaction, models
 from django.contrib.auth.decorators import login_required
@@ -12,6 +11,7 @@ from .models import Order, OrderItem, Coupon
 from .utils import calc_shipping
 from accounts.forms import AddressForm
 from accounts.models import Address
+
 
 @login_required
 @transaction.atomic
@@ -58,12 +58,21 @@ def checkout(request):
         if form.is_valid():
             address = form.cleaned_data.get("address_id")
             if not address:
-                messages.error(request, _("لطفاً یک آدرس انتخاب کنید یا از مرحله قبل آدرس بسازید."))
-                return render(request, "orders/checkout.html", {"step": "review", "form": form, "cart": cart, "has_addresses": has_addresses})
-
+                messages.error(
+                    request, _("لطفاً یک آدرس انتخاب کنید یا از مرحله قبل آدرس بسازید.")
+                )
+                return render(
+                    request,
+                    "orders/checkout.html",
+                    {
+                        "step": "review",
+                        "form": form,
+                        "cart": cart,
+                        "has_addresses": has_addresses,
+                    },
+                )
 
             subtotal = cart.total_price()
-
 
             coupon_code = (form.cleaned_data.get("coupon_code") or "").strip()
             discount_amount = Decimal("0")
@@ -77,7 +86,9 @@ def checkout(request):
                     discount_amount = Decimal(coupon_obj.compute_discount(subtotal))
                     applied_code = coupon_obj.code
 
-            shipping_cost = calc_shipping(subtotal - discount_amount, address.province.name)
+            shipping_cost = calc_shipping(
+                subtotal - discount_amount, address.province.name
+            )
             total = subtotal - discount_amount + shipping_cost
             if total < 0:
                 total = Decimal("0")
@@ -98,12 +109,13 @@ def checkout(request):
                 coupon_code=applied_code,
             )
 
-
             for row in cart:
                 v = row["variation"]
                 qty = row["quantity"]
                 if v.stock < qty:
-                    messages.error(request, _(f"موجودی کافی برای {v.product.name} موجود نیست."))
+                    messages.error(
+                        request, _(f"موجودی کافی برای {v.product.name} موجود نیست.")
+                    )
                     raise ValueError("Insufficient stock")
                 OrderItem.objects.create(
                     order=order,
@@ -117,9 +129,10 @@ def checkout(request):
                 v.stock -= qty
                 v.save(update_fields=["stock"])
 
-
             if coupon_obj and applied_code:
-                Coupon.objects.filter(pk=coupon_obj.pk).update(used_count=models.F("used_count") + 1)
+                Coupon.objects.filter(pk=coupon_obj.pk).update(
+                    used_count=models.F("used_count") + 1
+                )
 
             cart.clear()
             messages.success(request, _("سفارش شما ثبت شد."))
@@ -139,6 +152,8 @@ def checkout(request):
             "has_addresses": has_addresses,
         },
     )
+
+
 @login_required
 def order_success(request, order_id):
     order = get_object_or_404(Order, id=order_id, user=request.user)

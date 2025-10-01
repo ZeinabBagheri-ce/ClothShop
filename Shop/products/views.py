@@ -4,12 +4,16 @@ from django.db.models import Q, Prefetch, OuterRef, Subquery, F, DecimalField
 from django.db.models.functions import Coalesce
 
 from .models import (
-    Product, ProductImage, ProductVariation,
-    Category, Brand, Color, Size
+    Product,
+    ProductImage,
+    ProductVariation,
+    Category,
+    Brand,
+    Color,
+    Size,
 )
 
 
-# ---------- Utilities ----------
 def _descendant_ids(root: Category) -> list[int]:
     """
     همهٔ آیدی‌های نوادگان (فرزند، نوه، …) + خود ریشه را برمی‌گرداند.
@@ -19,8 +23,9 @@ def _descendant_ids(root: Category) -> list[int]:
     frontier = [root.id]
     while frontier:
         children = list(
-            Category.objects.filter(is_active=True, parent_id__in=frontier)
-                            .values_list("id", flat=True)
+            Category.objects.filter(is_active=True, parent_id__in=frontier).values_list(
+                "id", flat=True
+            )
         )
         if not children:
             break
@@ -38,11 +43,13 @@ def _base_queryset():
     """
     var_min_qs = (
         ProductVariation.objects.filter(product=OuterRef("pk"), is_active=True)
-        .annotate(eff_price=Coalesce(
-            F("price_override"),
-            F("product__discount_price"),
-            F("product__price"),
-        ))
+        .annotate(
+            eff_price=Coalesce(
+                F("price_override"),
+                F("product__discount_price"),
+                F("product__price"),
+            )
+        )
         .order_by("eff_price")
         .values("eff_price")[:1]
     )
@@ -51,11 +58,16 @@ def _base_queryset():
         Product.objects.filter(is_active=True)
         .select_related("brand", "category")
         .prefetch_related(
-            Prefetch("images", queryset=ProductImage.objects.order_by("-is_main", "id")),
+            Prefetch(
+                "images", queryset=ProductImage.objects.order_by("-is_main", "id")
+            ),
         )
         .annotate(
             min_price=Coalesce(
-                Subquery(var_min_qs, output_field=DecimalField(max_digits=12, decimal_places=2)),
+                Subquery(
+                    var_min_qs,
+                    output_field=DecimalField(max_digits=12, decimal_places=2),
+                ),
                 Coalesce(F("discount_price"), F("price")),
             )
         )
@@ -87,16 +99,15 @@ def _apply_filters_sort(request, qs):
 
     sort = (request.GET.get("sort") or "new").lower()
     order_map = {
-        "new":        ("-created_at", "-id"),
-        "price_asc":  ("min_price", "name", "id"),
+        "new": ("-created_at", "-id"),
+        "price_asc": ("min_price", "name", "id"),
         "price_desc": ("-min_price", "name", "id"),
-        "name":       ("name", "id"),
+        "name": ("name", "id"),
     }
     qs = qs.order_by(*order_map.get(sort, ("-created_at", "-id")))
     return qs, {"q": q, "brand": brand_slug, "cat": cat_slug, "sort": sort}
 
 
-# ---------- Views ----------
 def product_list(request):
     """
     لیست محصولات با فیلتر و مرتب‌سازی (پوشش دستهٔ والد + زیر‌دسته‌ها)
@@ -105,13 +116,16 @@ def product_list(request):
         Product.objects.filter(is_active=True)
         .select_related("brand", "category")
         .prefetch_related(
-            Prefetch("images", queryset=ProductImage.objects.order_by("-is_main", "id")),
-            Prefetch("variations", queryset=ProductVariation.objects.filter(is_active=True)),
+            Prefetch(
+                "images", queryset=ProductImage.objects.order_by("-is_main", "id")
+            ),
+            Prefetch(
+                "variations", queryset=ProductVariation.objects.filter(is_active=True)
+            ),
         )
         .annotate(final_price=Coalesce(F("discount_price"), F("price")))
     )
 
-    # ----- فیلترها -----
     q = (request.GET.get("q") or "").strip()
     if q:
         qs = qs.filter(
@@ -124,7 +138,6 @@ def product_list(request):
     if brand:
         qs = qs.filter(brand__slug=brand)
 
-    # دسته: والد + همهٔ زیر‌دسته‌ها
     cat = request.GET.get("cat")
     if cat:
         cat_obj = get_object_or_404(Category, slug=cat, is_active=True)
@@ -149,7 +162,6 @@ def product_list(request):
     if in_stock == "1":
         qs = qs.filter(variations__stock__gt=0)
 
-    # ----- مرتب‌سازی -----
     sort = (request.GET.get("sort") or "new").lower()
     if sort == "price_asc":
         qs = qs.order_by("final_price", "-created_at")
@@ -162,11 +174,9 @@ def product_list(request):
 
     qs = qs.distinct()
 
-    # ----- صفحه‌بندی -----
     paginator = Paginator(qs, 12)
     page_obj = paginator.get_page(request.GET.get("page"))
 
-    # داده‌ها برای فیلترها/سایدبار
     ctx = {
         "products": page_obj,
         "brands": Brand.objects.all().order_by("name"),
@@ -177,15 +187,18 @@ def product_list(request):
         ),
         "colors": Color.objects.all().order_by("name"),
         "sizes": Size.objects.all().order_by("sort_order", "name"),
-
-        # وضعیت فیلترها
-        "q": q, "brand": brand, "cat": cat,
-        "color": color, "size": size,
-        "min_price": min_price, "max_price": max_price,
-        "in_stock": in_stock, "sort": sort,
-
-        # querystring بدون page
-        "querystring": "&".join(f"{k}={v}" for k, v in request.GET.items() if k != "page"),
+        "q": q,
+        "brand": brand,
+        "cat": cat,
+        "color": color,
+        "size": size,
+        "min_price": min_price,
+        "max_price": max_price,
+        "in_stock": in_stock,
+        "sort": sort,
+        "querystring": "&".join(
+            f"{k}={v}" for k, v in request.GET.items() if k != "page"
+        ),
     }
     return render(request, "products/product_list.html", ctx)
 
@@ -201,7 +214,9 @@ def category_detail(request, slug):
     paginator = Paginator(qs, 12)
     products = paginator.get_page(request.GET.get("page"))
 
-    categories = Category.objects.filter(parent__isnull=True, is_active=True).prefetch_related("children")
+    categories = Category.objects.filter(
+        parent__isnull=True, is_active=True
+    ).prefetch_related("children")
     brands = Brand.objects.all()
 
     return render(
@@ -227,7 +242,9 @@ def brand_detail(request, slug):
     paginator = Paginator(qs, 12)
     products = paginator.get_page(request.GET.get("page"))
 
-    categories = Category.objects.filter(parent__isnull=True, is_active=True).prefetch_related("children")
+    categories = Category.objects.filter(
+        parent__isnull=True, is_active=True
+    ).prefetch_related("children")
     brands = Brand.objects.all()
 
     return render(
@@ -245,7 +262,6 @@ def brand_detail(request, slug):
     )
 
 
-# ---- helper for product_detail (normalize hex)
 def _norm_hex(val: str) -> str:
     """
     نرمال‌سازی مقدار HEX برای نمایش رنگ:
@@ -262,12 +278,15 @@ def _norm_hex(val: str) -> str:
 
 def product_detail(request, slug):
     product = get_object_or_404(
-        Product.objects.select_related("brand", "category")
-        .prefetch_related(
-            Prefetch("images", queryset=ProductImage.objects.order_by("-is_main", "id")),
+        Product.objects.select_related("brand", "category").prefetch_related(
+            Prefetch(
+                "images", queryset=ProductImage.objects.order_by("-is_main", "id")
+            ),
             Prefetch(
                 "variations",
-                queryset=ProductVariation.objects.filter(is_active=True).select_related("color", "size"),
+                queryset=ProductVariation.objects.filter(is_active=True).select_related(
+                    "color", "size"
+                ),
             ),
         ),
         slug=slug,
@@ -280,26 +299,38 @@ def product_detail(request, slug):
     variants = []
 
     for v in variations:
-        variants.append({
-            "id": v.id,
-            "color_id": v.color_id,
-            "color": v.color.name if v.color else "",
-            "color_code": getattr(v.color, "code", "") if v.color else "",  # انبارداری/داخلی
-            "color_hex": _norm_hex(getattr(v.color, "hex_code", "")) if v.color else "",
-            "size_id": v.size_id,
-            "size": v.size.name if v.size else "",
-            "price": str(v.final_price),
-            "stock": v.stock,
-            "image": v.image.url if v.image else (product.image.url if product.image else ""),
-            "sku": v.sku,
-        })
+        variants.append(
+            {
+                "id": v.id,
+                "color_id": v.color_id,
+                "color": v.color.name if v.color else "",
+                "color_code": (
+                    getattr(v.color, "code", "") if v.color else ""
+                ),  # انبارداری/داخلی
+                "color_hex": (
+                    _norm_hex(getattr(v.color, "hex_code", "")) if v.color else ""
+                ),
+                "size_id": v.size_id,
+                "size": v.size.name if v.size else "",
+                "price": str(v.final_price),
+                "stock": v.stock,
+                "image": (
+                    v.image.url
+                    if v.image
+                    else (product.image.url if product.image else "")
+                ),
+                "sku": v.sku,
+            }
+        )
 
         if v.color_id and v.color_id not in seen_colors:
-            colors.append({
-                "id": v.color_id,
-                "name": v.color.name,
-                "hex": _norm_hex(getattr(v.color, "hex_code", "")) or "#eeeeee",
-            })
+            colors.append(
+                {
+                    "id": v.color_id,
+                    "name": v.color.name,
+                    "hex": _norm_hex(getattr(v.color, "hex_code", "")) or "#eeeeee",
+                }
+            )
             seen_colors.add(v.color_id)
 
         if v.size_id and v.size_id not in seen_sizes:
@@ -311,10 +342,9 @@ def product_detail(request, slug):
         "products/product_detail.html",
         {
             "product": product,
-            "variants": variants,   # شامل color_hex برای JS
-            "colors": colors,       # هر رنگ با hex نرمال‌شده
+            "variants": variants,  # شامل color_hex برای JS
+            "colors": colors,  # هر رنگ با hex نرمال‌شده
             "sizes": sizes,
-            # برای پیام‌های خطا/اعلان احتمالی از سبد
             "out_of_stock": request.GET.get("out_of_stock"),
             "available": request.GET.get("available"),
             "wanted": request.GET.get("wanted"),

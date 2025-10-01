@@ -1,4 +1,3 @@
-# cart/views.py
 from urllib.parse import urlencode
 
 from django.shortcuts import render, redirect, get_object_or_404
@@ -27,17 +26,17 @@ def add_to_cart(request):
     )
     qty = form.cleaned_data["quantity"]
 
-    # کمبود موجودی → بازگشت به صفحه محصول با پارامترهای هشدار
     if variation.stock < qty:
-        params = urlencode({
-            "out_of_stock": 1,
-            "available": variation.stock,
-            "wanted": qty,
-            "vid": variation.id,  # تا روی همان واریانت فوکوس شود
-        })
+        params = urlencode(
+            {
+                "out_of_stock": 1,
+                "available": variation.stock,
+                "wanted": qty,
+                "vid": variation.id,  # تا روی همان واریانت فوکوس شود
+            }
+        )
         return redirect(f"{variation.product.get_absolute_url()}?{params}")
 
-    # افزودن به سبد
     cart = Cart(request)
     cart.add(variation.id, quantity=qty)
     messages.success(request, _("به سبد اضافه شد."))
@@ -62,16 +61,16 @@ def update_cart(request, variation_id: int):
     except ValueError:
         qty = 1
 
-    variation = get_object_or_404(
-        ProductVariation, pk=variation_id, is_active=True
-    )
+    variation = get_object_or_404(ProductVariation, pk=variation_id, is_active=True)
     if qty > variation.stock:
-        params = urlencode({
-            "out_of_stock": 1,
-            "available": variation.stock,
-            "wanted": qty,
-            "vid": variation.id,
-        })
+        params = urlencode(
+            {
+                "out_of_stock": 1,
+                "available": variation.stock,
+                "wanted": qty,
+                "vid": variation.id,
+            }
+        )
         return redirect(f"{variation.product.get_absolute_url()}?{params}")
 
     cart.add(variation_id, quantity=qty, replace=True)

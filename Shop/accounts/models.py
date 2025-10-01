@@ -1,4 +1,8 @@
-from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
+from django.contrib.auth.models import (
+    AbstractBaseUser,
+    BaseUserManager,
+    PermissionsMixin,
+)
 from django.db import models
 from django.db.models import Q
 from django.utils import timezone
@@ -38,6 +42,7 @@ class UserManager(BaseUserManager):
     def get_by_natural_key(self, identifier: str):
         return self.get(Q(email__iexact=identifier) | Q(username__iexact=identifier))
 
+
 class User(AbstractBaseUser, PermissionsMixin):
     email = models.EmailField(_("ایمیل"), unique=True, db_index=True)
     username = models.CharField(
@@ -48,10 +53,10 @@ class User(AbstractBaseUser, PermissionsMixin):
         validators=[RegexValidator(r"^[\w.@+-]+$", _("فقط حروف، اعداد و . @ + - _"))],
     )
     first_name = models.CharField(_("نام"), max_length=50, blank=True)
-    last_name  = models.CharField(_("نام خانوادگی"), max_length=50, blank=True)
+    last_name = models.CharField(_("نام خانوادگی"), max_length=50, blank=True)
 
     is_active = models.BooleanField(_("فعال"), default=True)
-    is_staff  = models.BooleanField(_("کارمند"), default=False)
+    is_staff = models.BooleanField(_("کارمند"), default=False)
     date_joined = models.DateTimeField(_("تاریخ عضویت"), default=timezone.now)
 
     objects = UserManager()
@@ -70,53 +75,84 @@ class User(AbstractBaseUser, PermissionsMixin):
     def full_name(self):
         return f"{self.first_name} {self.last_name}".strip()
 
+
 class Profile(models.Model):
-    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="profile")
-    phone = models.CharField(_("شماره موبایل"), max_length=20, unique=True, null=True, blank=True,
-                             help_text=_("مثال: +09123456789"))
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="profile"
+    )
+    phone = models.CharField(
+        _("شماره موبایل"),
+        max_length=20,
+        unique=True,
+        null=True,
+        blank=True,
+        help_text=_("مثال: +09123456789"),
+    )
     is_phone_verified = models.BooleanField(_("تأیید تلفن"), default=False)
-    avatar = models.ImageField(_("تصویر پروفایل"), upload_to="avatars/%Y/%m/", null=True, blank=True)
+    avatar = models.ImageField(
+        _("تصویر پروفایل"), upload_to="avatars/%Y/%m/", null=True, blank=True
+    )
     date_of_birth = models.DateField(_("تاریخ تولد"), null=True, blank=True)
 
     def __str__(self):
         return f"پروفایل {self.user.username}"
 
+
 class Province(models.Model):
     name = models.CharField(_("استان"), max_length=100, unique=True)
+
     class Meta:
         ordering = ["name"]
         verbose_name = _("استان")
         verbose_name_plural = _("استان‌ها")
+
     def __str__(self):
         return self.name
 
+
 class City(models.Model):
-    province = models.ForeignKey(Province, on_delete=models.CASCADE, related_name="cities")
+    province = models.ForeignKey(
+        Province, on_delete=models.CASCADE, related_name="cities"
+    )
     name = models.CharField(_("شهر"), max_length=120)
+
     class Meta:
         ordering = ["name"]
         unique_together = [("province", "name")]
         verbose_name = _("شهر")
         verbose_name_plural = _("شهرها")
+
     def __str__(self):
         return f"{self.name} ({self.province.name})"
 
+
 class Address(models.Model):
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="addresses")
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="addresses"
+    )
 
     full_name = models.CharField(_("نام و نام خانوادگی"), max_length=100)
     phone = models.CharField(_("شماره تلفن"), max_length=20, blank=True)
 
     address_exact = models.CharField(_("آدرس دقیق"), max_length=255, default="نامشخص")
-    description   = models.CharField(_("توضیحات"), max_length=255, blank=True)
+    description = models.CharField(_("توضیحات"), max_length=255, blank=True)
 
-    province = models.ForeignKey(Province, on_delete=models.PROTECT, related_name="addresses",
-                                 null=True, verbose_name=_("استان"))
-    city = models.ForeignKey(City, on_delete=models.PROTECT, related_name="addresses",
-                             null=True, verbose_name=_("شهر"))
+    province = models.ForeignKey(
+        Province,
+        on_delete=models.PROTECT,
+        related_name="addresses",
+        null=True,
+        verbose_name=_("استان"),
+    )
+    city = models.ForeignKey(
+        City,
+        on_delete=models.PROTECT,
+        related_name="addresses",
+        null=True,
+        verbose_name=_("شهر"),
+    )
 
     postal_code = models.CharField(_("کد پستی"), max_length=20)
-    # country حذف شد
     is_default = models.BooleanField(_("آدرس پیش‌فرض"), default=False)
 
     created_at = models.DateTimeField(_("ایجاد"), auto_now_add=True)

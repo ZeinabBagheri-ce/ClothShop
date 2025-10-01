@@ -5,7 +5,13 @@ from django.core.exceptions import ValidationError
 from django.urls import reverse
 
 
-def unique_slugify(instance, value, field_name: str = "slug", allow_unicode: bool = True, max_length: int = 160):
+def unique_slugify(
+    instance,
+    value,
+    field_name: str = "slug",
+    allow_unicode: bool = True,
+    max_length: int = 160,
+):
 
     base = slugify(value, allow_unicode=allow_unicode) or "item"
     field = instance._meta.get_field(field_name)
@@ -30,9 +36,7 @@ class Category(models.Model):
     name = models.CharField(_("نام دسته"), max_length=100)
     slug = models.SlugField(_("اسلاگ"), unique=True, allow_unicode=True, max_length=120)
     parent = models.ForeignKey(
-        "self", null=True, blank=True,
-        related_name="children",
-        on_delete=models.CASCADE
+        "self", null=True, blank=True, related_name="children", on_delete=models.CASCADE
     )
     is_active = models.BooleanField(_("فعال"), default=True)
 
@@ -47,7 +51,9 @@ class Category(models.Model):
 
     def save(self, *args, **kwargs):
         if not self.slug:
-            self.slug = unique_slugify(self, self.name, allow_unicode=True, max_length=120)
+            self.slug = unique_slugify(
+                self, self.name, allow_unicode=True, max_length=120
+            )
         super().save(*args, **kwargs)
 
     def get_absolute_url(self):
@@ -69,7 +75,9 @@ class Brand(models.Model):
 
     def save(self, *args, **kwargs):
         if not self.slug:
-            self.slug = unique_slugify(self, self.name, allow_unicode=True, max_length=120)
+            self.slug = unique_slugify(
+                self, self.name, allow_unicode=True, max_length=120
+            )
         super().save(*args, **kwargs)
 
     def get_absolute_url(self):
@@ -80,13 +88,16 @@ class Color(models.Model):
     name = models.CharField(_("رنگ"), max_length=50)
 
     hex_code = models.CharField(
-        _("کد HEX (اختیاری)"),
-        max_length=7, blank=True,
-        help_text=_("مثال: #000000")
+        _("کد HEX (اختیاری)"), max_length=7, blank=True, help_text=_("مثال: #000000")
     )
 
-    code = models.CharField(_("کد یکتای رنگ"), max_length=32, blank=True, null=True,
-                            help_text=_("مثل: RED, BLK, CRM …"))
+    code = models.CharField(
+        _("کد یکتای رنگ"),
+        max_length=32,
+        blank=True,
+        null=True,
+        help_text=_("مثل: RED, BLK, CRM …"),
+    )
 
     class Meta:
         verbose_name = _("رنگ")
@@ -100,9 +111,13 @@ class Color(models.Model):
 class Size(models.Model):
     name = models.CharField(_("سایز"), max_length=20)
     sort_order = models.PositiveIntegerField(_("ترتیب"), default=0)
-    # کد یکتای سایز
-    code = models.CharField(_("کد یکتای سایز"), max_length=32, blank=True, null=True,
-                            help_text=_("مثل: S, M, L, 38, 40 …"))
+    code = models.CharField(
+        _("کد یکتای سایز"),
+        max_length=32,
+        blank=True,
+        null=True,
+        help_text=_("مثل: S, M, L, 38, 40 …"),
+    )
 
     class Meta:
         verbose_name = _("سایز")
@@ -114,7 +129,9 @@ class Size(models.Model):
 
 
 class Product(models.Model):
-    category = models.ForeignKey(Category, related_name="products", on_delete=models.PROTECT)
+    category = models.ForeignKey(
+        Category, related_name="products", on_delete=models.PROTECT
+    )
     brand = models.ForeignKey(Brand, related_name="products", on_delete=models.PROTECT)
 
     name = models.CharField(_("نام محصول"), max_length=200)
@@ -123,15 +140,22 @@ class Product(models.Model):
     description = models.TextField(_("توضیحات"), blank=True)
 
     price = models.DecimalField(_("قیمت پایه"), max_digits=12, decimal_places=2)
-    discount_price = models.DecimalField(_("قیمت با تخفیف"), max_digits=12, decimal_places=2,
-                                         null=True, blank=True,
-                                         help_text=_("اگر خالی بماند همان قیمت پایه لحاظ می‌شود"))
+    discount_price = models.DecimalField(
+        _("قیمت با تخفیف"),
+        max_digits=12,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text=_("اگر خالی بماند همان قیمت پایه لحاظ می‌شود"),
+    )
 
     is_active = models.BooleanField(_("فعال"), default=True)
     created_at = models.DateTimeField(_("ساخته‌شده"), auto_now_add=True)
     updated_at = models.DateTimeField(_("به‌روزرسانی"), auto_now=True)
 
-    image = models.ImageField(_("تصویر اصلی"), upload_to="products/%Y/%m/", null=True, blank=True)
+    image = models.ImageField(
+        _("تصویر اصلی"), upload_to="products/%Y/%m/", null=True, blank=True
+    )
 
     class Meta:
         verbose_name = _("محصول")
@@ -149,7 +173,9 @@ class Product(models.Model):
 
     def clean(self):
         if self.discount_price is not None and self.discount_price >= self.price:
-            raise ValidationError({"discount_price": _("قیمت با تخفیف باید کمتر از قیمت پایه باشد.")})
+            raise ValidationError(
+                {"discount_price": _("قیمت با تخفیف باید کمتر از قیمت پایه باشد.")}
+            )
 
     @property
     def base_final_price(self):
@@ -160,7 +186,9 @@ class Product(models.Model):
 
     def save(self, *args, **kwargs):
         if not self.slug:
-            self.slug = unique_slugify(self, self.name, allow_unicode=True, max_length=160)
+            self.slug = unique_slugify(
+                self, self.name, allow_unicode=True, max_length=160
+            )
         super().save(*args, **kwargs)
 
     def get_absolute_url(self):
@@ -168,7 +196,9 @@ class Product(models.Model):
 
 
 class ProductImage(models.Model):
-    product = models.ForeignKey(Product, related_name="images", on_delete=models.CASCADE)
+    product = models.ForeignKey(
+        Product, related_name="images", on_delete=models.CASCADE
+    )
     image = models.ImageField(_("تصویر"), upload_to="products/gallery/%Y/%m/")
     alt_text = models.CharField(_("متن جایگزین"), max_length=150, blank=True)
     is_main = models.BooleanField(_("تصویر اصلی؟"), default=False)
@@ -183,22 +213,42 @@ class ProductImage(models.Model):
 
 
 class ProductVariation(models.Model):
-    product = models.ForeignKey(Product, related_name="variations", on_delete=models.CASCADE)
+    product = models.ForeignKey(
+        Product, related_name="variations", on_delete=models.CASCADE
+    )
 
-    color = models.ForeignKey(Color, related_name="variations", on_delete=models.PROTECT, null=True, blank=True)
-    size = models.ForeignKey(Size, related_name="variations", on_delete=models.PROTECT, null=True, blank=True)
+    color = models.ForeignKey(
+        Color,
+        related_name="variations",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+    )
+    size = models.ForeignKey(
+        Size, related_name="variations", on_delete=models.PROTECT, null=True, blank=True
+    )
 
-    sku = models.CharField(_("SKU"), max_length=40, unique=True,
-                           help_text=_("کد یکتا برای انبار/فروش"))
+    sku = models.CharField(
+        _("SKU"), max_length=40, unique=True, help_text=_("کد یکتا برای انبار/فروش")
+    )
     barcode = models.CharField(_("بارکد"), max_length=64, blank=True)
 
-    price_override = models.DecimalField(_("قیمت اختصاصی"), max_digits=12, decimal_places=2,
-                                         null=True, blank=True,
-                                         help_text=_("اگر خالی باشد از قیمت محصول استفاده می‌شود"))
+    price_override = models.DecimalField(
+        _("قیمت اختصاصی"),
+        max_digits=12,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text=_("اگر خالی باشد از قیمت محصول استفاده می‌شود"),
+    )
     stock = models.PositiveIntegerField(_("موجودی"), default=0)
     is_active = models.BooleanField(_("فعال"), default=True)
-    image = models.ImageField(_("تصویر واریانت (اختیاری)"), upload_to="products/variants/%Y/%m/",
-                              null=True, blank=True)
+    image = models.ImageField(
+        _("تصویر واریانت (اختیاری)"),
+        upload_to="products/variants/%Y/%m/",
+        null=True,
+        blank=True,
+    )
 
     class Meta:
         verbose_name = _("واریانت محصول")
@@ -218,8 +268,10 @@ class ProductVariation(models.Model):
 
     def __str__(self):
         parts = []
-        if self.color: parts.append(self.color.name)
-        if self.size: parts.append(self.size.name)
+        if self.color:
+            parts.append(self.color.name)
+        if self.size:
+            parts.append(self.size.name)
         suffix = " / ".join(parts) if parts else "بدون ویژگی"
         return f"{self.product.name} — {suffix}"
 

@@ -2,8 +2,13 @@ from django.contrib import admin
 from django.utils.html import format_html, format_html_join
 from django.utils.translation import gettext_lazy as _
 from .models import (
-    Brand, Category, Color, Size,
-    Product, ProductImage, ProductVariation
+    Brand,
+    Category,
+    Color,
+    Size,
+    Product,
+    ProductImage,
+    ProductVariation,
 )
 
 
@@ -37,22 +42,35 @@ class ProductVariationInline(admin.TabularInline):
 
 @admin.register(Product)
 class ProductAdmin(admin.ModelAdmin):
-    list_display = ("name", "brand", "category", "is_active", "created_at",
-                    "available_colors", "variation_count")
+    list_display = (
+        "name",
+        "brand",
+        "category",
+        "is_active",
+        "created_at",
+        "available_colors",
+        "variation_count",
+    )
     list_filter = ("is_active", "brand", "category")
     search_fields = ("name", "brand__name", "category__name")
     inlines = [ProductImageInline, ProductVariationInline]
     readonly_fields = ("variation_matrix_html",)
     fieldsets = (
-        (None, {"fields": ("name", "slug", "brand", "category", "image", "description")}),
+        (
+            None,
+            {"fields": ("name", "slug", "brand", "category", "image", "description")},
+        ),
         (_("قیمت‌ها/وضعیت"), {"fields": ("price", "discount_price", "is_active")}),
         (_("خلاصه تنوع‌ها"), {"fields": ("variation_matrix_html",)}),
     )
 
     @admin.display(description=_("رنگ‌های موجود"))
     def available_colors(self, obj: Product):
-        qs = (obj.variations.filter(is_active=True, color__isnull=False)
-              .values_list("color__name", flat=True).distinct())
+        qs = (
+            obj.variations.filter(is_active=True, color__isnull=False)
+            .values_list("color__name", flat=True)
+            .distinct()
+        )
         return ", ".join(qs) or "—"
 
     @admin.display(description=_("تعداد واریانت‌ها"))
@@ -76,18 +94,19 @@ class ProductAdmin(admin.ModelAdmin):
                 matrix[key] = {
                     "name": color.name if color else "—",
                     "code": color.code if color else "",
-                    "rows": []
+                    "rows": [],
                 }
-            matrix[key]["rows"].append((
-                size.name if size else "—",
-                size.code if size else "",
-                v.sku,
-                v.stock,
-            ))
+            matrix[key]["rows"].append(
+                (
+                    size.name if size else "—",
+                    size.code if size else "",
+                    v.sku,
+                    v.stock,
+                )
+            )
 
         if not matrix:
             return "واریانتی ثبت نشده است."
-
 
         parts = []
         for _, col in sorted(matrix.items(), key=lambda x: x[1]["name"]):
@@ -95,11 +114,17 @@ class ProductAdmin(admin.ModelAdmin):
             if col["code"]:
                 head += f" <span class='text-muted'>({col['code']})</span>"
             lines = format_html_join(
-                "", "<li>{} <span class='text-muted'>({})</span> — SKU: <code>{}</code> — {} عدد</li>",
-                ((r[0], r[1] or "—", r[2], r[3]) for r in sorted(col["rows"]))
+                "",
+                "<li>{} <span class='text-muted'>({})</span> — SKU: <code>{}</code> — {} عدد</li>",
+                ((r[0], r[1] or "—", r[2], r[3]) for r in sorted(col["rows"])),
             )
-            parts.append(format_html("<div style='margin-bottom:.5rem'>{}<ul style='margin:.25rem 0 .5rem 1rem'>{}</ul></div>",
-                                    format_html(head), lines))
+            parts.append(
+                format_html(
+                    "<div style='margin-bottom:.5rem'>{}<ul style='margin:.25rem 0 .5rem 1rem'>{}</ul></div>",
+                    format_html(head),
+                    lines,
+                )
+            )
 
         return format_html("".join(parts))
 
