@@ -1,49 +1,31 @@
-{% extends "_base.html" %} {% load static %} {% block title %}Home{% endblock %}
+{% extends "_base.html" %}
+{% load static %}
+
+{% block title %}Home{% endblock %}
+
 {% block content %}
 <div class="container my-4">
-  <!-- Slider ساده (تصاویر نمونه را در static/img قرار بده) -->
+  <!-- Slider -->
   <div id="homeCarousel" class="carousel slide mb-4" data-bs-ride="carousel">
     <div class="carousel-inner rounded-3 overflow-hidden">
       <div class="carousel-item active">
-        <img
-          src="{% static 'img/slider-2.jpg' %}"
-          class="d-block w-100"
-          alt="بنر 1"
-        />
+        <img src="{% static 'img/slider-2.jpg' %}" class="d-block w-100" alt="بنر 1" />
         <div class="carousel-caption d-none d-md-block">
           <h5>کالکشن جدید</h5>
           <p>اکنون ببینید</p>
         </div>
       </div>
       <div class="carousel-item">
-        <img
-          src="{% static 'img/slider-2.jpg' %}"
-          class="d-block w-100"
-          alt="بنر 2"
-        />
+        <img src="{% static 'img/slider-2.jpg' %}" class="d-block w-100" alt="بنر 2" />
       </div>
       <div class="carousel-item">
-        <img
-          src="{% static 'img/slider-2.jpg' %}"
-          class="d-block w-100"
-          alt="بنر 3"
-        />
+        <img src="{% static 'img/slider-2.jpg' %}" class="d-block w-100" alt="بنر 3" />
       </div>
     </div>
-    <button
-      class="carousel-control-prev"
-      type="button"
-      data-bs-target="#homeCarousel"
-      data-bs-slide="prev"
-    >
+    <button class="carousel-control-prev" type="button" data-bs-target="#homeCarousel" data-bs-slide="prev">
       <span class="carousel-control-prev-icon"></span>
     </button>
-    <button
-      class="carousel-control-next"
-      type="button"
-      data-bs-target="#homeCarousel"
-      data-bs-slide="next"
-    >
+    <button class="carousel-control-next" type="button" data-bs-target="#homeCarousel" data-bs-slide="next">
       <span class="carousel-control-next-icon"></span>
     </button>
   </div>
@@ -52,11 +34,8 @@
   <section class="mb-5">
     <div class="d-flex justify-content-between align-items-center mb-3">
       <h4 class="mb-0">تخفیف‌دارها</h4>
-      <a
-        class="text-decoration-none"
-        href="{% url 'products:list' %}?sort=price_asc"
-        >مشاهده همه</a
-      >
+      <!-- مهم: discounted=1 اضافه شد تا صفحه لیست فقط تخفیفی‌ها را نشان دهد -->
+      <a class="text-decoration-none" href="{% url 'products:list' %}?discounted=1&sort=price_asc">مشاهده همه</a>
     </div>
     <div class="row g-3">
       {% include "partials/_product_grid.html" with items=discounted %}
@@ -67,11 +46,7 @@
   <section class="mb-5">
     <div class="d-flex justify-content-between align-items-center mb-3">
       <h4 class="mb-0">جدیدترین‌ها</h4>
-      <a
-        class="text-decoration-none"
-        href="{% url 'products:list' %}?sort=newest"
-        >مشاهده همه</a
-      >
+      <a class="text-decoration-none" href="{% url 'products:list' %}?sort=newest">مشاهده همه</a>
     </div>
     <div class="row g-3">
       {% include "partials/_product_grid.html" with items=newest %}
@@ -82,11 +57,7 @@
   <section>
     <div class="d-flex justify-content-between align-items-center mb-3">
       <h4 class="mb-0">پرفروش‌ترین‌ها</h4>
-      <a
-        class="text-decoration-none"
-        href="{% url 'products:list' %}?sort=newest"
-        >مشاهده همه</a
-      >
+      <a class="text-decoration-none" href="{% url 'products:list' %}?sort=bestseller">مشاهده همه</a>
     </div>
     <div class="row g-3">
       {% include "partials/_product_grid.html" with items=bestsellers %}

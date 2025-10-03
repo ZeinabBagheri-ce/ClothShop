@@ -1,29 +1,38 @@
-{% extends "_base.html" %} {% load i18n %} {% block title %}سفارش ثبت شد{%
-endblock %} {% block content %}
+{% extends "_base.html" %}
+{% load i18n %}
+
+{% block title %}
+{% trans "سفارش ثبت شد" %}
+{% endblock %}
+
+{% block content %}
 <div class="container my-5">
   <div class="alert alert-success">
-    سفارش شما ثبت شد. شماره سفارش: <strong>#{{ order.id }}</strong>
+    {% trans "سفارش شما ثبت شد. شماره سفارش:" %} <strong>#{{ order.id }}</strong>
   </div>
 
-  {% if order.status == "pending" %}
-  <div class="mb-3">
-    <p class="mb-2">مبلغ قابل پرداخت: <strong>{{ order.total}}</strong> ریال</p>
-    <a
-      class="btn btn-primary"
-      href="{% url 'payments:zarinpal_start' order.id %}"
-      >پرداخت با زرین‌پال</a
-    >
-    <a class="btn btn-outline-secondary ms-2" href="{% url 'products:list' %}"
-      >ادامه خرید</a
-    >
-  </div>
+  {# اگر وضعیت سفارش در انتظار پرداخت است، دکمه پرداخت را نشان بده #}
+  {% if order.status|upper == "PENDING" %}
+    <div class="mb-3">
+      <p class="mb-2">
+        {% trans "مبلغ قابل پرداخت:" %}
+        <strong>{{ order.total }}</strong>
+        {% trans "ریال" %}
+      </p>
+      <a class="btn btn-primary" href="{% url 'payments:zarinpal_start' order.id %}">
+        {% trans "پرداخت با زرین‌پال" %}
+      </a>
+      <a class="btn btn-outline-secondary ms-2" href="{% url 'products:list' %}">
+        {% trans "ادامه خرید" %}
+      </a>
+    </div>
   {% else %}
-  <div class="mb-3">
-    <span class="badge text-bg-success">پرداخت شده</span>
-    <a class="btn btn-outline-secondary ms-2" href="{% url 'products:list' %}"
-      >ادامه خرید</a
-    >
-  </div>
+    <div class="mb-3">
+      <span class="badge text-bg-success">{% trans "پرداخت شده" %}</span>
+      <a class="btn btn-outline-secondary ms-2" href="{% url 'products:list' %}">
+        {% trans "ادامه خرید" %}
+      </a>
+    </div>
   {% endif %}
 </div>
 {% endblock %}

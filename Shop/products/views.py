@@ -1,6 +1,16 @@
 from django.shortcuts import render, get_object_or_404
 from django.core.paginator import Paginator
-from django.db.models import Q, Prefetch, OuterRef, Subquery, F, DecimalField
+from django.db.models import (
+    Q,
+    Prefetch,
+    OuterRef,
+    Subquery,
+    F,
+    DecimalField,
+    Sum,
+    IntegerField,
+    Value,
+)
 from django.db.models.functions import Coalesce
 
 from .models import (
@@ -12,6 +22,14 @@ from .models import (
     Color,
     Size,
 )
+
+# تلاش برای استفاده از orders (اختیاری/ایمن)
+try:
+    from orders.models import OrderItem
+    HAS_ORDERS = True
+except Exception:
+    OrderItem = None
+    HAS_ORDERS = False
 
 
 def _descendant_ids(root: Category) -> list[int]:
@@ -97,14 +115,32 @@ def _apply_filters_sort(request, qs):
         cat_obj = get_object_or_404(Category, slug=cat_slug, is_active=True)
         qs = qs.filter(category_id__in=_descendant_ids(cat_obj))
 
+    # فقط تخفیف‌دارها
+    if (request.GET.get("discounted") or "") == "1":
+        qs = qs.filter(discount_price__isnull=False)
+
     sort = (request.GET.get("sort") or "new").lower()
-    order_map = {
-        "new": ("-created_at", "-id"),
-        "price_asc": ("min_price", "name", "id"),
-        "price_desc": ("-min_price", "name", "id"),
-        "name": ("name", "id"),
-    }
-    qs = qs.order_by(*order_map.get(sort, ("-created_at", "-id")))
+
+    # مرتب‌سازی پرفروش‌ها (اگر orders موجود باشد)
+    if sort == "bestseller" and HAS_ORDERS:
+        sales_sq = (
+            OrderItem.objects.filter(variation__product=OuterRef("pk"))
+            .values("variation__product")
+            .annotate(total=Sum("quantity"))
+            .values("total")[:1]
+        )
+        qs = qs.annotate(
+            sold=Coalesce(Subquery(sales_sq, output_field=IntegerField()), Value(0))
+        ).order_by("-sold", "-created_at", "-id")
+    else:
+        order_map = {
+            "new": ("-created_at", "-id"),
+            "price_asc": ("min_price", "name", "id"),
+            "price_desc": ("-min_price", "name", "id"),
+            "name": ("name", "id"),
+        }
+        qs = qs.order_by(*order_map.get(sort, ("-created_at", "-id")))
+
     return qs, {"q": q, "brand": brand_slug, "cat": cat_slug, "sort": sort}
 
 
@@ -151,6 +187,11 @@ def product_list(request):
     if size:
         qs = qs.filter(variations__size_id=size)
 
+    # فقط تخفیف‌دارها (برای لینک «مشاهده همه تخفیف‌دارها»)
+    discounted = request.GET.get("discounted")
+    if discounted == "1":
+        qs = qs.filter(discount_price__isnull=False)
+
     min_price = request.GET.get("min")
     max_price = request.GET.get("max")
     if min_price:
@@ -164,12 +205,24 @@ def product_list(request):
 
     sort = (request.GET.get("sort") or "new").lower()
     if sort == "price_asc":
-        qs = qs.order_by("final_price", "-created_at")
+        qs = qs.order_by("final_price", "-created_at", "-id")
     elif sort == "price_desc":
-        qs = qs.order_by("-final_price", "-created_at")
+        qs = qs.order_by("-final_price", "-created_at", "-id")
     elif sort == "name":
         qs = qs.order_by("name", "id")
-    else:  # newest
+    elif sort == "bestseller" and HAS_ORDERS:
+        # مرتب‌سازی پرفروش‌ها با استفاده از OrderItem
+        sales_sq = (
+            OrderItem.objects.filter(variation__product=OuterRef("pk"))
+            .values("variation__product")
+            .annotate(total=Sum("quantity"))
+            .values("total")[:1]
+        )
+        qs = qs.annotate(
+            sold=Coalesce(Subquery(sales_sq, output_field=IntegerField()), Value(0))
+        ).order_by("-sold", "-created_at", "-id")
+    else:
+        # newest
         qs = qs.order_by("-created_at", "-id")
 
     qs = qs.distinct()
@@ -196,6 +249,7 @@ def product_list(request):
         "max_price": max_price,
         "in_stock": in_stock,
         "sort": sort,
+        "discounted": discounted,
         "querystring": "&".join(
             f"{k}={v}" for k, v in request.GET.items() if k != "page"
         ),
@@ -304,21 +358,13 @@ def product_detail(request, slug):
                 "id": v.id,
                 "color_id": v.color_id,
                 "color": v.color.name if v.color else "",
-                "color_code": (
-                    getattr(v.color, "code", "") if v.color else ""
-                ),  # انبارداری/داخلی
-                "color_hex": (
-                    _norm_hex(getattr(v.color, "hex_code", "")) if v.color else ""
-                ),
+                "color_code": (getattr(v.color, "code", "") if v.color else ""),
+                "color_hex": (_norm_hex(getattr(v.color, "hex_code", "")) if v.color else ""),
                 "size_id": v.size_id,
                 "size": v.size.name if v.size else "",
                 "price": str(v.final_price),
                 "stock": v.stock,
-                "image": (
-                    v.image.url
-                    if v.image
-                    else (product.image.url if product.image else "")
-                ),
+                "image": (v.image.url if v.image else (product.image.url if product.image else "")),
                 "sku": v.sku,
             }
         )
@@ -342,9 +388,10 @@ def product_detail(request, slug):
         "products/product_detail.html",
         {
             "product": product,
-            "variants": variants,  # شامل color_hex برای JS
-            "colors": colors,  # هر رنگ با hex نرمال‌شده
+            "variants": variants,
+            "colors": colors,
             "sizes": sizes,
+            # پارامترهای اختیاری برای نمایش پیام‌ها
             "out_of_stock": request.GET.get("out_of_stock"),
             "available": request.GET.get("available"),
             "wanted": request.GET.get("wanted"),

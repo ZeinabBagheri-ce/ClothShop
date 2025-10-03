@@ -1,0 +1,220 @@
+<script>
+(function(){
+  const VARIANTS = {{ variants|safe }};
+  const colorWrap = document.getElementById('colorChips');
+  const sizeWrap  = document.getElementById('sizeChips');
+
+  const selColor = document.getElementById('selColor');
+  const selSize  = document.getElementById('selSize');
+
+  const priceEl  = document.getElementById('price');
+  const skuEl    = document.getElementById('skuBadge');
+  const stockEl  = document.getElementById('stockBadge');
+  const addBtn   = document.getElementById('addToCartBtn');
+  const hidVar   = document.getElementById('variationIdInput');
+  const alertEl  = document.getElementById('variantAlert');
+  const mainImg  = document.getElementById('mainImage');
+
+  const qtyInput = document.getElementById('qtyInput');
+  const stockWarning = document.getElementById('stockWarning');
+
+  const fa = n => Number(n||0).toLocaleString('fa-IR');
+
+  // --- helper: تبدیل ارقام فارسی/عربی به انگلیسی ---
+  const toEnDigits = s => String(s).replace(/[۰-۹٠-٩]/g, d =>
+    '٠١٢٣٤٥٦٧٨٩'.indexOf(d) > -1 ? '0123456789'['٠١٢٣٤٥٦٧٨٩'.indexOf(d)] :
+    '۰۱۲۳۴۵۶۷۸۹'.indexOf(d) > -1 ? '0123456789'['۰۱۲۳۴۵۶۷۸۹'.indexOf(d)] : d
+  );
+  const num = s => {
+    const n = parseInt(toEnDigits(s), 10);
+    return isNaN(n) ? 0 : n;
+  };
+
+  function stockByColor(colorId){
+    return VARIANTS
+      .filter(v=>String(v.color_id)===String(colorId))
+      .reduce((s,v)=>s+(v.stock||0),0);
+  }
+
+  function sizesForColor(colorId){
+    const list = {};
+    VARIANTS.filter(v=>String(v.color_id)===String(colorId)).forEach(v=>{
+      const key = String(v.size_id || 'null');
+      if(!list[key]) list[key] = {size_id: v.size_id, size: v.size || '{% trans "یک اندازه" %}', stock:0};
+      list[key].stock += (v.stock||0);
+    });
+    return Object.values(list);
+  }
+
+  function findVariant(colorId,sizeId){
+    return VARIANTS.find(v =>
+      String(v.color_id)===String(colorId) &&
+      String(v.size_id||'')===String(sizeId||'')
+    );
+  }
+
+  // --- چک تعداد نسبت به موجودی و نمایش هشدار ---
+  function checkQtyAgainstStock() {
+    const maxStock = num(qtyInput.dataset.stock || '0');
+    const val = num(qtyInput.value || '1');
+
+    // اگر واریانتی انتخاب نشده، اینجا کاری نکن
+    if (!hidVar.value) return;
+
+    if (maxStock > 0 && val > maxStock) {
+      stockWarning.classList.remove('d-none');
+      addBtn.disabled = true;
+    } else {
+      stockWarning.classList.add('d-none');
+      // فقط وقتی واریانت داریم و موجودی > 0 است، دکمه فعال شود
+      addBtn.disabled = !(hidVar.value && maxStock > 0);
+    }
+  }
+
+  function refreshColorChips(){
+    colorWrap.querySelectorAll('[data-color]').forEach(ch=>{
+      const cid = ch.dataset.color;
+      const s = stockByColor(cid);
+      const sold = ch.querySelector('.soldout');
+      const mark = ch.querySelector('.mark');
+      if(s>0){
+        ch.setAttribute('aria-disabled','false');
+        sold.classList.add('d-none');
+        mark.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+          <path d="M20 6L9 17l-5-5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+      }else{
+        ch.setAttribute('aria-disabled','true');
+        sold.classList.remove('d-none');
+        mark.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+          <path d="M18 6L6 18M6 6l12 12" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+      }
+    });
+  }
+
+  function renderSizes(){
+    sizeWrap.innerHTML = '';
+    const colorId = selColor.value;
+    if(!colorId){ return; }
+
+    const items = sizesForColor(colorId);
+    if(items.length===0){
+      sizeWrap.innerHTML = `<span class="muted">{% trans "برای این رنگ، واریانتی وجود ندارد." %}</span>`;
+      return;
+    }
+
+    items.forEach(it=>{
+      const chip = document.createElement('div');
+      chip.className = 'chip';
+      chip.dataset.size = String(it.size_id||'');
+      chip.setAttribute('role','button');
+      chip.setAttribute('aria-disabled', it.stock>0 ? 'false' : 'true');
+      chip.innerHTML = `
+        <span class="mark">${
+          it.stock>0
+          ? `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M20 6L9 17l-5-5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`
+          : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M18 6L6 18M6 6l12 12" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`
+        }</span>
+        <span>${it.size}</span>
+        <span class="soldout ${it.stock>0?'d-none':''}">{% trans "ناموجود" %}</span>
+      `;
+      chip.addEventListener('click',()=>{
+        if(chip.getAttribute('aria-disabled')==='true') return;
+        sizeWrap.querySelectorAll('.chip').forEach(c=>c.dataset.active='0');
+        chip.dataset.active='1';
+        selSize.value = it.size_id || '';
+        applyVariant();
+      });
+      sizeWrap.appendChild(chip);
+    });
+
+    const firstOk = sizeWrap.querySelector('.chip[aria-disabled="false"]');
+    if(firstOk){ firstOk.click(); }
+  }
+
+  function applyVariant(){
+    const colorId = selColor.value || null;
+    const sizeId  = selSize.value || null;
+    const v = findVariant(colorId,sizeId);
+
+    // هر بار واریانت عوض شد، تعداد را به 1 برگردان
+    qtyInput.value = '1';
+    stockWarning.classList.add('d-none');
+
+    if(v){
+      priceEl.textContent = fa(v.price);
+      skuEl.textContent   = 'SKU: ' + (v.sku || '-');
+
+      // ثبت موجودی برای کنترل تعداد
+      qtyInput.dataset.stock = String(v.stock || 0);
+      qtyInput.setAttribute('max', String(v.stock || 0));
+
+      if(v.stock>0){
+        stockEl.classList.add('h-ok');
+        stockEl.textContent = '{% trans "موجودی" %}: ' + fa(v.stock);
+        addBtn.disabled = false; // فعلاً آزاد، ولی بلافاصله چک می‌کنیم
+      }else{
+        stockEl.classList.remove('h-ok');
+        stockEl.textContent = '{% trans "ناموجود" %}';
+        addBtn.disabled = true;
+      }
+      if(v.image){ mainImg.src = v.image; }
+      hidVar.value = v.id;
+      alertEl.classList.add('d-none');
+
+      // بلافاصله چک تعداد
+      checkQtyAgainstStock();
+    }else{
+      skuEl.textContent = 'SKU: -';
+      stockEl.classList.remove('h-ok');
+      stockEl.textContent = '{% trans "موجودی" %}: -';
+      addBtn.disabled = true;
+      hidVar.value = '';
+      qtyInput.dataset.stock = '0';
+      qtyInput.removeAttribute('max');
+      stockWarning.classList.add('d-none');
+    }
+  }
+
+  // رنگ‌ها
+  colorWrap.querySelectorAll('[data-color]').forEach(ch=>{
+    ch.addEventListener('click', ()=>{
+      if(ch.getAttribute('aria-disabled')==='true') return;
+      colorWrap.querySelectorAll('[data-color]').forEach(x=>x.dataset.active='0');
+      ch.dataset.active='1';
+      selColor.value = ch.dataset.color;
+      selSize.value  = '';
+      renderSizes();
+    });
+  });
+
+  // وضعیت اولیه
+  refreshColorChips();
+  const firstColor = colorWrap.querySelector('.chip[aria-disabled="false"]');
+  if(firstColor){ firstColor.click(); }
+
+  // کنترل تعداد
+  document.getElementById('qtyMinus').onclick = ()=>{
+    const n = Math.max(1, num(qtyInput.value) - 1);
+    qtyInput.value = n;
+    checkQtyAgainstStock();
+  };
+  document.getElementById('qtyPlus').onclick  = ()=>{
+    const n = num(qtyInput.value) + 1;
+    qtyInput.value = n;
+    checkQtyAgainstStock();
+  };
+  qtyInput.addEventListener('input',  checkQtyAgainstStock);
+  qtyInput.addEventListener('change', checkQtyAgainstStock);
+
+  // جلوگیری از سابمیت بدون واریانت یا بیش از موجودی
+  document.getElementById('addToCartForm').addEventListener('submit', function(e){
+    const maxStock = num(qtyInput.dataset.stock||'0');
+    const val = num(qtyInput.value||'1');
+    if(!hidVar.value || (maxStock>0 && val>maxStock)){
+      e.preventDefault();
+      if(!hidVar.value) alertEl.classList.remove('d-none');
+      if(val>maxStock) stockWarning.classList.remove('d-none');
+    }
+  });
+})();
+</script>

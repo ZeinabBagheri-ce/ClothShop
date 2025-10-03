@@ -1,131 +1,96 @@
-{% load static %} {% block css %}
+{% load i18n %}
+
 <style>
   .dropdown-mega .mega-menu {
     min-width: 70vw;
     border-radius: 12px;
   }
-
   .dropdown-mega .dropdown-menu {
     inset-inline-start: 0;
     inset-inline-end: 0;
   }
-
   .dropdown-mega h6 .border-start {
     border-color: #f18a2a !important;
     border-width: 3px !important;
   }
-
   @media (min-width: 992px) {
-    .dropdown-mega:hover > .dropdown-menu {
-      display: block;
-    }
+    .dropdown-mega:hover > .dropdown-menu { display: block; }
   }
 </style>
-{% endblock %}
 
 <nav class="navbar navbar-expand-lg navbar-light bg-light border-bottom">
   <div class="container-fluid">
+
     <a class="navbar-brand fw-bold" href="{% url 'home:index' %}">نِوادو</a>
 
-    <button
-      class="navbar-toggler"
-      type="button"
-      data-bs-toggle="collapse"
-      data-bs-target="#navbarMain"
-      aria-controls="navbarMain"
-      aria-expanded="false"
-      aria-label="Toggle navigation"
-    >
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse"
+            data-bs-target="#navbarMain" aria-controls="navbarMain"
+            aria-expanded="false" aria-label="Toggle navigation">
       <span class="navbar-toggler-icon"></span>
     </button>
 
     <div class="collapse navbar-collapse" id="navbarMain">
       <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+
         <li class="nav-item">
-          <a
-            class="nav-link{% if request.resolver_match.namespace == 'home' and request.resolver_match.url_name == 'index' %} active{% endif %}"
-            href="{% url 'home:index' %}"
-            >خانه</a
-          >
+          <a class="nav-link{% if request.resolver_match.namespace == 'home' and request.resolver_match.url_name == 'index' %} active{% endif %}"
+             href="{% url 'home:index' %}">{% trans "خانه" %}</a>
         </li>
 
         <li class="nav-item">
-          <a
-            class="nav-link{% if request.resolver_match.url_name == 'about' %} active{% endif %}"
-            href="{% url 'home:about' %}"
-            >درباره‌ما</a
-          >
+          <a class="nav-link{% if request.resolver_match.url_name == 'about' %} active{% endif %}"
+             href="{% url 'home:about' %}">{% trans "درباره‌ما" %}</a>
         </li>
 
         <li class="nav-item">
-          <a
-            class="nav-link{% if request.resolver_match.namespace == 'products' and request.resolver_match.url_name in 'list,detail' %} active{% endif %}"
-            href="{% url 'products:list' %}"
-            >محصولات</a
-          >
+          <a class="nav-link{% if request.resolver_match.namespace == 'products' and request.resolver_match.url_name in 'list,detail' %} active{% endif %}"
+             href="{% url 'products:list' %}">{% trans "محصولات" %}</a>
         </li>
 
+        <!-- مگامنو دسته‌بندی‌ها -->
         <li class="nav-item dropdown dropdown-mega">
-          <a
-            class="nav-link dropdown-toggle"
-            href="#"
-            id="megaCats"
-            role="button"
-            data-bs-toggle="dropdown"
-            aria-expanded="false"
-          >
-            دسته‌بندی‌ها
+          <a class="nav-link dropdown-toggle" href="#" id="megaCats" role="button"
+             data-bs-toggle="dropdown" aria-expanded="false">
+            {% trans "دسته‌بندی‌ها" %}
           </a>
 
           {% with cats=nav_categories|default:top_categories %}
           <div class="dropdown-menu mega-menu p-4" aria-labelledby="megaCats">
             <div class="container-fluid">
               <div class="row g-4">
-                <!-- ستونِ لینک «مشاهده همه» -->
                 <div class="col-12">
-                  <a
-                    class="text-primary fw-bold small float-start"
-                    href="{% url 'products:list' %}"
-                  >
-                    مشاهدهٔ همه محصولات
+                  <a class="text-primary fw-bold small float-start"
+                     href="{% url 'products:list' %}">
+                    {% trans "مشاهدهٔ همه محصولات" %}
                   </a>
                 </div>
 
-                {# هر ریشه یک ستون؛ در دسکتاپ 4 ستون، تبلت 2، موبایل 1 #} {% for
-                cat in cats %}
-                <div class="col-12 col-md-6 col-lg-3">
-                  <h6 class="fw-bold d-flex align-items-center mb-3">
-                    <span class="border-start ps-2">{{ cat.name }}</span>
-                  </h6>
+                {% for cat in cats %}
+                  <div class="col-12 col-md-6 col-lg-3">
+                    <h6 class="fw-bold d-flex align-items-center mb-3">
+                      <span class="border-start ps-2">{{ cat.name }}</span>
+                    </h6>
 
-                  <ul class="list-unstyled mb-0 small">
-                    <li>
-                      <a
-                        class="fw-semibold d-inline-block mb-2"
-                        href="{{ cat.get_absolute_url }}"
-                      >
-                        همه {{ cat.name }}
-                      </a>
-                    </li>
+                    <ul class="list-unstyled mb-0 small">
+                      <li>
+                        <a class="fw-semibold d-inline-block mb-2" href="{{ cat.get_absolute_url }}">
+                          {% trans "همه" %} {{ cat.name }}
+                        </a>
+                      </li>
 
-                    {% for sub in cat.children.all %}
-                    <li class="mb-1">
-                      <a
-                        class="link-dark text-decoration-none"
-                        href="{{ sub.get_absolute_url }}"
-                      >
-                        {{ sub.name }}
-                      </a>
-                    </li>
-                    {% empty %}
-                    <li class="text-muted">زیردسته‌ای ندارد</li>
-                    {% endfor %}
-                  </ul>
-                </div>
+                      {% for sub in cat.children.all %}
+                        <li class="mb-1">
+                          <a class="link-dark text-decoration-none" href="{{ sub.get_absolute_url }}">
+                            {{ sub.name }}
+                          </a>
+                        </li>
+                      {% empty %}
+                        <li class="text-muted">{% trans "زیردسته‌ای ندارد" %}</li>
+                      {% endfor %}
+                    </ul>
+                  </div>
                 {% empty %}
-                <div class="col-12">
-                  <span class="text-muted">دسته‌ای موجود نیست</span>
-                </div>
+                  <div class="col-12"><span class="text-muted">{% trans "دسته‌ای موجود نیست" %}</span></div>
                 {% endfor %}
               </div>
             </div>
@@ -134,102 +99,38 @@
         </li>
 
         {% if user.is_authenticated %}
-        <li class="nav-item">
-          <a class="nav-link" href="{% url 'accounts:profile' %}">پروفایل</a>
-        </li>
-        <li class="nav-item">
-          <a class="nav-link" href="{% url 'accounts:logout' %}">خروج</a>
-        </li>
+          <li class="nav-item">
+            <a class="nav-link" href="{% url 'accounts:profile' %}">{% trans "پروفایل" %}</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="{% url 'accounts:logout' %}">{% trans "خروج" %}</a>
+          </li>
         {% else %}
-        <li class="nav-item">
-          <a class="nav-link" href="{% url 'accounts:login' %}">ورود</a>
-        </li>
-        <li class="nav-item">
-          <a class="nav-link" href="{% url 'accounts:register' %}">ثبت‌نام</a>
-        </li>
+          <li class="nav-item">
+            <a class="nav-link" href="{% url 'accounts:login' %}">{% trans "ورود" %}</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="{% url 'accounts:register' %}">{% trans "ثبت‌نام" %}</a>
+          </li>
         {% endif %}
       </ul>
 
       <div class="d-flex align-items-center gap-3">
         <form class="d-flex" method="get" action="{% url 'products:list' %}">
-          <input
-            class="form-control"
-            type="search"
-            placeholder="جستجوی محصول…"
-            aria-label="Search"
-            name="q"
-            value="{{ query|default_if_none:'' }}"
-            style="min-width: 220px"
-          />
-          <button class="btn btn-outline-secondary ms-2" type="submit">
-            جستجو
-          </button>
+          <input class="form-control" type="search" placeholder="{% trans 'جستجوی محصول…' %}" aria-label="Search"
+                 name="q" value="{{ query|default_if_none:'' }}" style="min-width:220px">
+          <button class="btn btn-outline-secondary ms-2" type="submit">{% trans "جستجو" %}</button>
         </form>
 
-        <a
-          href="{% url 'cart:detail' %}"
-          class="btn btn-outline-primary position-relative"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="18"
-            height="18"
-            fill="currentColor"
-            class="bi bi-cart"
-            viewBox="0 0 16 16"
-            style="margin-top: -2px"
-          >
-            <path
-              d="M0 1.5A.5.5 0 0 1 .5 1h1a.5.5 0 0 1 .485.379L2.89 6H14.5a.5.5 0 0 1 .491.592l-1.5 8A.5.5 0 0 1 13 15H4a.5.5 0 0 1-.491-.408L1.01 2H.5a.5.5 0 0 1-.5-.5zM5 16a1 1 0 1 0 0-2 1 1 0 0 0 0 2zm7 1a1 1 0 1 0 0-2 1 1 0 0 0 0 2z"
-            />
-          </svg>
-          <span class="ms-2">سبد خرید</span>
-          <span
-            class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger"
-          >
+        <a href="{% url 'cart:detail' %}" class="btn btn-outline-primary position-relative">
+          <i class="bi bi-cart"></i>
+          <span class="ms-2">{% trans "سبد خرید" %}</span>
+          <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
             {{ cart_count|default:"0" }}
           </span>
         </a>
-        <span class="text-muted small"
-          >جمع: {{ cart_total|default:"0" }} تومان</span
-        >
+        <span class="text-muted small">{% trans "جمع" %}: {{ cart_total|default:"0" }} {% trans "تومان" %}</span>
       </div>
     </div>
   </div>
 </nav>
-
-<!-- JS خیلی سبک برای باز/بستن زیرمنوی سطح دوم در Bootstrap 5 -->
-<script>
-  document.addEventListener("DOMContentLoaded", function () {
-    // وقتی dropdown اصلی بسته شد، همهٔ زیرمنوها را هم ببند
-    document.querySelectorAll("#catsDropdown").forEach(function (trigger) {
-      trigger.addEventListener("hide.bs.dropdown", function () {
-        document
-          .querySelectorAll(".dropdown-submenu .dropdown-menu")
-          .forEach(function (m) {
-            m.classList.remove("show");
-          });
-      });
-    });
-
-    // تریگر سطح دوم
-    document
-      .querySelectorAll(".dropdown-submenu > .dropdown-toggle")
-      .forEach(function (el) {
-        el.addEventListener("click", function (e) {
-          e.preventDefault();
-          e.stopPropagation();
-          const next = this.nextElementSibling;
-          if (!next) return;
-          // بستن سایر زیرمنوها
-          this.closest(".dropdown-menu")
-            .querySelectorAll(".dropdown-menu.show")
-            .forEach(function (m) {
-              if (m !== next) m.classList.remove("show");
-            });
-          // toggle زیرمنوی فعلی
-          next.classList.toggle("show");
-        });
-      });
-  });
-</script>

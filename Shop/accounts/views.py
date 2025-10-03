@@ -1,16 +1,15 @@
 from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout, get_user_model
-from django.contrib.auth.decorators import login_required
-from django.utils.translation import gettext_lazy as _
 from django.contrib.auth import views as auth_views
 from django.urls import reverse
 from django.http import JsonResponse, HttpResponseForbidden
 from django.db.models import Prefetch
-from django.views.decorators.http import require_POST
 from django.forms import modelform_factory
-
-from .forms import *  # UserRegisterForm, UserLoginForm, UserProfileForm, ProfileExtrasForm, AddressFormSet, BootstrapPasswordChangeForm
+from django.contrib.auth.decorators import login_required
+from django.views.decorators.http import require_POST
+from django.contrib import messages
+from django.utils.translation import gettext_lazy as _
+from .forms import *
 from .models import City
 
 User = get_user_model()
@@ -41,7 +40,7 @@ def user_register(request):
         if form.is_valid():
             form.save()
             messages.success(request, _("ثبت‌ نام با موفقیت انجام شد. اکنون وارد شوید."))
-            return redirect("home:home")
+            return redirect("home:index")
     else:
         form = UserRegisterForm()
     return render(request, "accounts/register.html", {"form": form})
@@ -440,51 +439,54 @@ def cities_by_province(request):
 @login_required
 @require_POST
 def staff_set_order_status(request, order_id: int):
+    """
+    تغییر وضعیت سفارش توسط کاربر staff.
+
+    نکته‌ها:
+    - مقدار status را بدون تغییر حروف (بدون upper()) ذخیره می‌کنیم
+      تا دقیقاً مطابق choices مدل باشد.
+    - لیست مقادیر مجاز را از Order.Status (یا field.choices) می‌خوانیم.
+    """
     if not request.user.is_staff or Order is None:
         return HttpResponseForbidden()
 
     order = get_object_or_404(Order, id=order_id)
+    new_status = (request.POST.get("status") or "").strip()  # هیچ upper/case-change
 
-    raw = (request.POST.get("status") or "").strip()
-    if not raw:
-        messages.error(request, _("وضعیت نامعتبر است."))
-        return redirect("accounts:profile")
-
-    try:
-        field = Order._meta.get_field("status")
-        choices = list(field.choices)  # [(value, label), ...]
-    except Exception:
-        choices = []
-
-    value_by_value = {str(v): v for v, _ in choices}
-    value_by_label = {str(lbl).casefold(): v for v, lbl in choices}
-
-    new_value = None
-    if raw in value_by_value:
-        new_value = value_by_value[raw]
-    else:
-        new_value = value_by_label.get(raw.casefold())
-
-    if new_value is None:
+    # استخراج مقادیر معتبر
+    valid_values = None
+    if hasattr(Order, "Status"):
         try:
-            enum_values = {
-                getattr(c, "value", None): getattr(c, "value", None)
-                for c in getattr(Order, "Status")
-            }
-            if raw in enum_values:
-                new_value = enum_values[raw]
+            valid_values = {c.value for c in Order.Status}
+        except Exception:
+            try:
+                valid_values = {v for v, _ in Order.Status.choices}
+            except Exception:
+                valid_values = None
+
+    # fallback از روی فیلد مدل
+    if valid_values is None:
+        try:
+            field = Order._meta.get_field("status")
+            if field.choices:
+                valid_values = {v for v, _ in field.choices}
         except Exception:
             pass
 
-    if new_value is None:
+    # اعتبارسنجی
+    if valid_values and new_status not in valid_values:
         messages.error(request, _("وضعیت نامعتبر است."))
         return redirect("accounts:profile")
 
-    order.status = new_value
-    order.save(update_fields=["status"])
-    messages.success(
-        request,
-        _("وضعیت سفارش به «%(st)s» تغییر کرد.")
-        % {"st": dict(choices).get(new_value, new_value)},
-    )
+    # ذخیره فقط اگر واقعاً تغییر کرده باشد
+    if order.status != new_status:
+        order.status = new_status
+        order.save(update_fields=["status"])
+        messages.success(
+            request,
+            _("وضعیت سفارش به «%(st)s» تغییر کرد.") % {"st": new_status},
+        )
+    else:
+        messages.info(request, _("وضعیت بدون تغییر است."))
+
     return redirect("accounts:profile")

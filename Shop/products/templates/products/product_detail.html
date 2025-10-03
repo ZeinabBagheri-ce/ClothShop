@@ -1,163 +1,118 @@
-{% extends "_base.html" %} {% load i18n %} {% block title %}{{ product.name }}{%
-endblock %} {% block content %}
-<style>
-  .pill {
-    border: 1px solid #ddd;
-    border-radius: 999px;
-    padding: 0.5rem 0.9rem;
-    cursor: pointer;
-    background: #fff;
-  }
-  .pill.disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
-  .pill.active {
-    border-color: #0d6efd;
-    box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.15);
-  }
-  .pill .dot {
-    display: inline-block;
-    width: 30px;
-    height: 30px;
-    border-radius: 50%;
-    margin-left: 0.4rem;
-    vertical-align: middle;
-    border: 1px solid #ccc;
-  }
-  .swatches {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.5rem;
-  }
-</style>
+{% extends "_base.html" %}
+{% load i18n static %}
 
+{% block title %}{{ product.name }}{% endblock %}
+
+{% block css %}
+<style>
+  .muted{color:#6b7280}
+  .soft-card{border:1px solid #e5e7eb;border-radius:16px}
+
+  .chip{display:inline-flex;align-items:center;gap:.6rem;background:#f7f7f8;border-radius:14px;
+        padding:.65rem 1rem; border:1px solid #e5e7eb; cursor:pointer; user-select:none}
+  .chip:hover{background:#f1f5f9}
+  .chip[aria-disabled="true"]{opacity:.55; cursor:not-allowed}
+  .chip[data-active="1"]{border-color:#0d6efd; box-shadow:0 0 0 3px rgba(13,110,253,.12); background:#fff}
+
+  .chip .mark{width:28px;height:28px;border-radius:50%;display:inline-grid;place-items:center;
+              background:#e5e7eb;flex:0 0 28px}
+  .chip .mark svg{width:16px;height:16px}
+  .chip[data-active="1"] .mark{background:#dbeafe}
+  .chip .soldout{font-size:.75rem;color:#ef4444;margin-right:.35rem}
+
+  .color-dot{width:30px;height:30px;border-radius:50%;border:1px solid #d1d5db;display:inline-block}
+
+  .h-pill{border-radius:999px;padding:.25rem .55rem;font-size:.85rem}
+  .h-ok{background:#dcfce7;color:#166534}
+</style>
+{% endblock %}
+
+{% block content %}
 <div class="container my-5">
   <div class="row g-4">
-    <!-- تصویر و گالری -->
+    <!-- گالری -->
     <div class="col-12 col-lg-6">
-      <div class="card">
-        <div class="card-body text-center">
-          {% if product.image %}
-          <img
-            id="mainImage"
-            src="{{ product.image.url }}"
-            alt="{{ product.name }}"
-            class="img-fluid rounded"
-          />
-          {% else %}
-          <img
-            id="mainImage"
-            src="https://via.placeholder.com/800x800?text=No+Image"
-            alt="no image"
-            class="img-fluid rounded"
-          />
-          {% endif %}
-        </div>
+      <div class="soft-card p-3 text-center">
+        {% if product.image %}
+          <img id="mainImage" src="{{ product.image.url }}" alt="{{ product.name }}" class="img-fluid rounded">
+        {% else %}
+          <img id="mainImage" src="{% static 'img/placeholder.png' %}" alt="{{ product.name }}" class="img-fluid rounded">
+        {% endif %}
       </div>
-
-      {% if product.images.all %}
-      <div class="d-flex gap-2 mt-3 flex-wrap">
-        {% for img in product.images.all %}
-        <img
-          src="{{ img.image.url }}"
-          alt="{{ img.alt_text }}"
-          class="img-thumbnail"
-          style="width: 84px; height: 84px; object-fit: cover; cursor: pointer"
-          onclick="document.getElementById('mainImage').src='{{ img.image.url }}'"
-        />
-        {% endfor %}
-      </div>
-      {% endif %}
     </div>
 
     <!-- جزئیات -->
     <div class="col-12 col-lg-6">
       <h3 class="mb-2">{{ product.name }}</h3>
-      <div class="text-muted mb-3">
-        {% if product.brand %}<span class="me-2"
-          >{% trans "برند" %}: {{ product.brand.name }}</span
-        >{% endif %} {% if product.category %}<span
-          >{% trans "دسته" %}:
-          <a href="{{ product.category.get_absolute_url }}"
-            >{{ product.category.name }}</a
-          ></span
-        >{% endif %}
+      <div class="muted mb-3">
+        {% if product.brand %}<span class="me-2">{% trans "برند" %}: {{ product.brand.name }}</span>{% endif %}
+        {% if product.category %}<span>{% trans "دسته" %}: <a href="{{ product.category.get_absolute_url }}">{{ product.category.name }}</a></span>{% endif %}
       </div>
 
       <!-- قیمت -->
-      <div class="mb-3">
-        <span class="h4" id="price">{{ product.base_final_price }}</span>
-        <span class="text-muted small">{% trans "تومان" %}</span>
+      <div class="mb-2 d-flex align-items-baseline gap-2">
+        <div class="h3 m-0" id="price">
+          {% if product.discount_price %}{{ product.discount_price|floatformat:0 }}{% else %}{{ product.price|floatformat:0 }}{% endif %}
+        </div>
+        <span class="muted">{% trans "تومان" %}</span>
       </div>
 
-      <!-- نشان‌ها -->
-      <div class="mb-3 d-flex gap-2">
-        <span class="badge text-bg-secondary" id="skuBadge">SKU: -</span>
-        <span class="badge text-bg-secondary" id="stockBadge"
-          >{% trans "موجودی" %}: -</span
-        >
+      <!-- وضعیت لحظه‌ای -->
+      <div class="mb-3 d-flex gap-2 align-items-center">
+        <span class="h-pill" id="skuBadge">SKU: -</span>
+        <span class="h-pill h-ok" id="stockBadge">{% trans "موجودی" %}: -</span>
       </div>
 
-      <!-- رنگ‌ها (pill) -->
+      <!-- رنگ‌ها -->
       <div class="mb-3">
         <label class="form-label d-block mb-2">{% trans "رنگ" %}</label>
-        <div id="colorPills" class="swatches">
+        <div id="colorChips" class="d-flex flex-wrap gap-2">
           {% for c in colors %}
-          <button type="button" class="pill" data-color="{{ c.id }}">
-            <span class="dot" style="background-color: {{ c.hex }};"></span>
-            {{ c.name }}
-          </button>
+            <div class="chip" data-color="{{ c.id }}" role="button" aria-disabled="false">
+              <span class="mark">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M20 6L9 17l-5-5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </span>
+              <span class="color-dot" style="background:{{ c.hex|default:'#ccc' }}"></span>
+              <span>{{ c.name }}</span>
+              <span class="soldout d-none">{% trans "ناموجود" %}</span>
+            </div>
           {% endfor %}
         </div>
+        <input type="hidden" id="selColor">
       </div>
 
-      <!-- سایزها (pill) -->
+      <!-- سایزها -->
       <div class="mb-3">
         <label class="form-label d-block mb-2">{% trans "سایز" %}</label>
-        <div id="sizePills" class="swatches"></div>
-        <div class="form-text" id="sizeHelp" style="display: none"></div>
+        <div id="sizeChips" class="d-flex flex-wrap gap-2"><!-- با انتخاب رنگ پر می‌شود --></div>
+        <input type="hidden" id="selSize">
       </div>
 
-      <!-- فرم سبد -->
-      <form
-        method="post"
-        action="{% url 'cart:add' %}"
-        id="addToCartForm"
-        class="d-grid gap-2 mt-3"
-      >
+      <!-- افزودن به سبد -->
+      <form method="post" action="{% url 'cart:add' %}" id="addToCartForm" class="d-flex align-items-center gap-3 mt-2">
         {% csrf_token %}
-        <input type="hidden" name="variation_id" id="variationIdInput" />
-        <div class="row g-2 align-items-center" style="max-width: 420px">
-          <div class="col-6">
-            <label class="form-label mb-1">{% trans "تعداد" %}</label>
-            <input
-              type="number"
-              name="quantity"
-              id="qtyInput"
-              min="1"
-              value="1"
-              class="form-control"
-            />
-          </div>
-          <div class="col-6">
-            <label class="form-label mb-1 invisible d-block">.</label>
-            <button class="btn btn-primary w-100" id="addToCartBtn" disabled>
-              {% trans "افزودن به سبد" %}
-            </button>
-          </div>
+        <input type="hidden" name="variation_id" id="variationIdInput">
+        <div class="input-group" style="max-width:180px">
+          <button class="btn btn-outline-secondary" type="button" id="qtyMinus">−</button>
+          <input type="number" name="quantity" min="1" value="1" class="form-control text-center" id="qtyInput">
+          <button class="btn btn-outline-secondary" type="button" id="qtyPlus">+</button>
         </div>
 
-        <div class="alert alert-warning d-none mt-2" id="variantAlert">
-          {% trans "لطفاً رنگ و سایز را انتخاب کنید." %}
-        </div>
-        <div class="alert alert-danger d-none mt-2" id="stockAlert">
-          {% trans "موجودی کافی نیست." %}
-        </div>
+        <!-- هشدار کمبود موجودی -->
+        <span class="form-text text-danger d-none" id="stockWarning">
+          {% trans "موجودی محصول کمتر از مقدار انتخاب‌شده است." %}
+        </span>
+
+        <button class="btn btn-primary px-5" id="addToCartBtn" disabled>{% trans "افزودن به سبد" %}</button>
       </form>
 
+      <!-- هشدار انتخاب واریانت -->
+      <div class="alert alert-warning mt-3 d-none" id="variantAlert">
+        {% trans "لطفاً ابتدا رنگ و سپس سایز را انتخاب کنید." %}
+      </div>
+
       {% if product.description %}
-      <hr class="my-4" />
+      <hr class="my-4">
       <h5 class="mb-2">{% trans "توضیحات" %}</h5>
       <p class="mb-0">{{ product.description|linebreaks }}</p>
       {% endif %}
@@ -166,161 +121,248 @@ endblock %} {% block content %}
 </div>
 
 <script>
-  (function() {
-    // واریانت‌ها از ویو
-    const VARIANTS = {{ variants|safe }};
+(function(){
+  // داده‌ها از سرور
+  const VARIANTS = {{ variants|safe }};
+  const colorWrap = document.getElementById('colorChips');
+  const sizeWrap  = document.getElementById('sizeChips');
 
-    const colorWrap = document.getElementById('colorPills');
-    const sizeWrap  = document.getElementById('sizePills');
+  const selColor = document.getElementById('selColor');
+  const selSize  = document.getElementById('selSize');
 
-    const priceEl  = document.getElementById('price');
-    const skuEl    = document.getElementById('skuBadge');
-    const stockEl  = document.getElementById('stockBadge');
-    const imgEl    = document.getElementById('mainImage');
+  const priceEl  = document.getElementById('price');
+  const skuEl    = document.getElementById('skuBadge');
+  const stockEl  = document.getElementById('stockBadge');
+  const addBtn   = document.getElementById('addToCartBtn');
+  const hidVar   = document.getElementById('variationIdInput');
+  const alertEl  = document.getElementById('variantAlert');
+  const mainImg  = document.getElementById('mainImage');
 
-    const hidVar   = document.getElementById('variationIdInput');
-    const qtyInput = document.getElementById('qtyInput');
-    const addBtn   = document.getElementById('addToCartBtn');
+  const qtyInput = document.getElementById('qtyInput');
+  let stockWarning = document.getElementById('stockWarning');
+  // اگر عنصر هشدار وجود نداشت، بساز
+  if (!stockWarning) {
+    stockWarning = document.createElement('span');
+    stockWarning.id = 'stockWarning';
+    stockWarning.className = 'form-text text-danger d-none';
+    stockWarning.textContent = '{{ _("موجودی محصول کمتر از مقدار انتخاب‌شده است.") }}';
+    qtyInput.closest('.input-group').insertAdjacentElement('afterend', stockWarning);
+  }
 
-    const alertVar   = document.getElementById('variantAlert');
-    const alertStock = document.getElementById('stockAlert');
+  // مبدّل ارقام فارسی/عربی
+  const toEnDigits = s => String(s).replace(/[۰-۹٠-٩]/g, d =>
+    '۰۱۲۳۴۵۶۷۸۹'.includes(d) ? '0123456789'['۰۱۲۳۴۵۶۷۸۹'.indexOf(d)]
+    : '٠١٢٣٤٥٦٧٨٩'.includes(d) ? '0123456789'['٠١٢٣٤٥٦٧٨٩'.indexOf(d)] : d
+  );
+  const asInt = s => {
+    const n = parseInt(toEnDigits(s), 10);
+    return isNaN(n) ? 0 : n;
+  };
 
-    let selectedColor = null;
-    let selectedSize  = null;
+  function checkQtyAgainstStock() {
+    const selected = hidVar.value;     // واریانت انتخاب شده؟
+    const maxStock = asInt(qtyInput.dataset.stock || '0');
+    const current  = Math.max(1, asInt(qtyInput.value || '1'));
 
-    // ابزارک کوچک برای ساخت دکمه سایز
-    function sizeButton(label, sizeId, disabled, stock) {
-      const b = document.createElement('button');
-      b.type = 'button';
-      b.className = 'pill';
-      b.dataset.size = sizeId ?? '';
-      b.textContent = disabled ? `${label} — {{ _('ناموجود') }}` : label;
-      if (disabled) b.classList.add('disabled');
-      // نمایش موجودی کنار سایز (می‌تونی حذفش کنی)
-      if (!disabled && typeof stock === 'number') {
-        const small = document.createElement('small');
-        small.className = 'ms-2 text-muted';
-        small.textContent = `({{ _('موجودی') }}: ${stock})`;
-        b.appendChild(small);
+    if (!selected || maxStock === 0) {
+      // اگر واریانت انتخاب نشده یا موجودی صفر است، پیام کمبود را پنهان کن
+      stockWarning.classList.add('d-none');
+      return;
+    }
+
+    if (current > maxStock) {
+      stockWarning.classList.remove('d-none');
+      addBtn.disabled = true;
+      qtyInput.setCustomValidity('{{ _("حداکثر تعداد مجاز") }}: ' + maxStock);
+      qtyInput.reportValidity();
+    } else {
+      stockWarning.classList.add('d-none');
+      qtyInput.setCustomValidity('');
+      // اگر واریانت معتبر و موجودی > 0 باشد فعال بماند
+      addBtn.disabled = false;
+    }
+  }
+
+  // موجودی مجموع برای هر رنگ
+  function stockByColor(colorId){
+    return VARIANTS
+      .filter(v=>String(v.color_id)===String(colorId))
+      .reduce((s,v)=>s+(v.stock||0),0);
+  }
+
+  // سایزهای یکتا برای رنگ با مجموع موجودی
+  function sizesForColor(colorId){
+    const list = {};
+    VARIANTS.filter(v=>String(v.color_id)===String(colorId)).forEach(v=>{
+      const key = String(v.size_id || 'null');
+      if(!list[key]) list[key] = {size_id: v.size_id, size: v.size || '{% trans "یک اندازه" %}', stock:0};
+      list[key].stock += (v.stock||0);
+    });
+    return Object.values(list);
+  }
+
+  // واریانت دقیق برای رنگ+سایز
+  function findVariant(colorId,sizeId){
+    return VARIANTS.find(v =>
+      String(v.color_id)===String(colorId) &&
+      String(v.size_id||'')===String(sizeId||'')
+    );
+  }
+
+  // رندر وضعیت رنگ‌ها (نمایش ناموجود)
+  function refreshColorChips(){
+    colorWrap.querySelectorAll('[data-color]').forEach(ch=>{
+      const cid = ch.dataset.color;
+      const s = stockByColor(cid);
+      const sold = ch.querySelector('.soldout');
+      const mark = ch.querySelector('.mark');
+      if(s>0){
+        ch.setAttribute('aria-disabled','false');
+        sold.classList.add('d-none');
+        mark.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+          <path d="M20 6L9 17l-5-5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+      }else{
+        ch.setAttribute('aria-disabled','true');
+        sold.classList.remove('d-none');
+        mark.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+          <path d="M18 6L6 18M6 6l12 12" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
       }
-      return b;
+    });
+  }
+
+  // رندر سایزها برای رنگ انتخاب‌شده
+  function renderSizes(){
+    sizeWrap.innerHTML = '';
+    const colorId = selColor.value;
+    if(!colorId){ return; }
+
+    const items = sizesForColor(colorId);
+    if(items.length===0){
+      sizeWrap.innerHTML = `<span class="muted">{% trans "برای این رنگ، واریانتی وجود ندارد." %}</span>`;
+      return;
     }
 
-    // بر اساس رنگ انتخاب‌شده، دکمه‌های سایز بساز
-    function rebuildSizes() {
-      sizeWrap.innerHTML = '';
-      selectedSize = null;
-
-      if (!selectedColor) return;
-
-      // واریانت‌های این رنگ
-      const vs = VARIANTS.filter(v => String(v.color_id) === String(selectedColor));
-
-      // گروه‌بندی بر اساس size_id با جمع موجودی
-      const map = new Map();
-      vs.forEach(v => {
-        const key = String(v.size_id || '');
-        const current = map.get(key) || {label: v.size || '{{ _("بدون سایز") }}', stock:0, size_id: v.size_id};
-        current.stock += Number(v.stock || 0);
-        map.set(key, current);
+    items.forEach(it=>{
+      const chip = document.createElement('div');
+      chip.className = 'chip';
+      chip.dataset.size = String(it.size_id||'');
+      chip.setAttribute('role','button');
+      chip.setAttribute('aria-disabled', it.stock>0 ? 'false' : 'true');
+      chip.innerHTML = `
+        <span class="mark">${
+          it.stock>0
+          ? `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M20 6L9 17l-5-5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`
+          : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M18 6L6 18M6 6l12 12" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`
+        }</span>
+        <span>${it.size}</span>
+        <span class="soldout ${it.stock>0?'d-none':''}">{% trans "ناموجود" %}</span>
+      `;
+      chip.addEventListener('click',()=>{
+        if(chip.getAttribute('aria-disabled')==='true') return;
+        sizeWrap.querySelectorAll('.chip').forEach(c=>c.dataset.active='0');
+        chip.dataset.active='1';
+        selSize.value = it.size_id || '';
+        applyVariant();
       });
+      sizeWrap.appendChild(chip);
+    });
 
-      // ساخت دکمه‌ها
-      map.forEach(({label, stock, size_id}) => {
-        const btn = sizeButton(label, size_id, stock <= 0, stock);
-        btn.addEventListener('click', () => {
-          if (btn.classList.contains('disabled')) return;
-          // active کردن
-          [...sizeWrap.querySelectorAll('.pill')].forEach(x => x.classList.remove('active'));
-          btn.classList.add('active');
-          selectedSize = size_id;
-          updateUI();
-        });
-        sizeWrap.appendChild(btn);
-      });
-    }
+    // پیش‌فرض: اولین سایزِ موجود
+    const firstOk = sizeWrap.querySelector('.chip[aria-disabled="false"]');
+    if(firstOk){ firstOk.click(); }
+  }
 
-    // یافتن واریانت دقیق
-    function findVariant() {
-      if (!selectedColor) return null;
+  // به‌روزرسانی واریانت و UI مرتبط
+  function applyVariant(){
+    const colorId = selColor.value || null;
+    const sizeId  = selSize.value || null;
+    const v = findVariant(colorId,sizeId);
 
-      // اگر سایز تعریف شده، باید match شود؛ اگر محصول بدون سایز است، همان رنگ کافی است
-      return VARIANTS.find(v =>
-        String(v.color_id||'') === String(selectedColor||'') &&
-        String(v.size_id||'')  === String(selectedSize||'')
-      ) || null;
-    }
+    if(v){
+      priceEl.textContent = Number(v.price||0).toLocaleString('fa-IR');
+      skuEl.textContent   = 'SKU: ' + (v.sku || '-');
 
-    // به‌روزرسانی رابط
-    function updateUI() {
-      const v = findVariant();
-
-      alertVar.classList.add('d-none');
-      alertStock.classList.add('d-none');
-
-      if (v) {
-        // قیمت و SKU
-        priceEl.textContent = v.price;
-        skuEl.textContent = 'SKU: ' + v.sku;
-
-        // موجودی
-        if (v.stock > 0) {
-          stockEl.textContent = '{{ _("موجودی") }}: ' + v.stock;
-          stockEl.className = 'badge text-bg-success';
-        } else {
-          stockEl.textContent = '{{ _("ناموجود") }}';
-          stockEl.className = 'badge text-bg-danger';
-        }
-
-        // تصویر
-        if (v.image) imgEl.src = v.image;
-
-        // ست کردن آی‌دی برای ارسال
-        hidVar.value = v.id;
-
-        // کنترل تعداد درخواستی
-        const req = Math.max(1, parseInt(qtyInput.value || '1', 10));
-        const enough = v.stock >= req;
-        addBtn.disabled = !(v.stock > 0 && enough);
-        if (!enough && v.stock > 0) {
-          alertStock.classList.remove('d-none');
-        }
-      } else {
-        // واریانت دقیق موجود نیست
-        skuEl.textContent = 'SKU: -';
-        stockEl.textContent = '{{ _("موجودی") }}: -';
-        stockEl.className = 'badge text-bg-secondary';
+      // موجودی و دکمه
+      if(v.stock>0){
+        stockEl.classList.add('h-ok');
+        stockEl.textContent = '{% trans "موجودی" %}: ' + Number(v.stock).toLocaleString('fa-IR');
+        addBtn.disabled = false;
+      }else{
+        stockEl.classList.remove('h-ok');
+        stockEl.textContent = '{% trans "ناموجود" %}';
         addBtn.disabled = true;
-        hidVar.value = '';
-        if (selectedColor) alertVar.classList.remove('d-none');
       }
+
+      // عکس و شناسه
+      if(v.image){ mainImg.src = v.image; }
+      hidVar.value = v.id;
+      alertEl.classList.add('d-none');
+
+      // محدودیت تعداد
+      qtyInput.dataset.stock = String(v.stock || 0);
+      qtyInput.setAttribute('max', String(v.stock || 0));
+      // اگر مقدار فعلی از موجودی بیشتر بود، برگردان به سقف
+      if (asInt(qtyInput.value) > (v.stock||0)) {
+        qtyInput.value = Math.max(1, v.stock || 1);
+      }
+      checkQtyAgainstStock();
+
+    }else{
+      skuEl.textContent = 'SKU: -';
+      stockEl.classList.remove('h-ok');
+      stockEl.textContent = '{% trans "موجودی" %}: -';
+      addBtn.disabled = true;
+      hidVar.value = '';
+      qtyInput.dataset.stock = '0';
+      qtyInput.removeAttribute('max');
+      stockWarning.classList.add('d-none');
     }
+  }
 
-    // لیسنر رنگ‌ها (pill)
-    colorWrap.querySelectorAll('.pill').forEach(btn => {
-      btn.addEventListener('click', () => {
-        // active
-        colorWrap.querySelectorAll('.pill').forEach(x => x.classList.remove('active'));
-        btn.classList.add('active');
-
-        selectedColor = btn.dataset.color;
-        selectedSize  = null; // ریست سایز
-        rebuildSizes();
-        updateUI();
-      });
+  // رویداد رنگ‌ها
+  colorWrap.querySelectorAll('[data-color]').forEach(ch=>{
+    ch.addEventListener('click', ()=>{
+      if(ch.getAttribute('aria-disabled')==='true') return;
+      colorWrap.querySelectorAll('[data-color]').forEach(x=>x.dataset.active='0');
+      ch.dataset.active='1';
+      selColor.value = ch.dataset.color;
+      selSize.value  = '';
+      renderSizes();
     });
+  });
 
-    // تعداد
-    qtyInput.addEventListener('input', updateUI);
+  // وضعیت اولیه رنگ‌ها + انتخاب خودکار اولین رنگِ موجود
+  refreshColorChips();
+  const firstColor = colorWrap.querySelector('.chip[aria-disabled="false"]');
+  if(firstColor){ firstColor.click(); }
 
-    // جلوگیری از ارسال بدون واریانت معتبر
-    document.getElementById('addToCartForm').addEventListener('submit', function(e){
-      if (!hidVar.value) {
-        e.preventDefault();
-        alertVar.classList.remove('d-none');
-      }
-    });
+  // کنترل تعداد
+  document.getElementById('qtyMinus').onclick = ()=>{
+    qtyInput.value = Math.max(1, asInt(qtyInput.value) - 1);
+    checkQtyAgainstStock();
+  };
+  document.getElementById('qtyPlus').onclick  = ()=>{
+    qtyInput.value = asInt(qtyInput.value) + 1;
+    checkQtyAgainstStock();
+  };
+  qtyInput.addEventListener('input',  checkQtyAgainstStock);
+  qtyInput.addEventListener('change', checkQtyAgainstStock);
 
-  })();
+  // جلوگیری از سابمیت بدون واریانت
+  document.getElementById('addToCartForm').addEventListener('submit', function(e){
+    if(!hidVar.value){
+      e.preventDefault();
+      alertEl.classList.remove('d-none');
+      return;
+    }
+    // هنگام ارسال، اگر بیش از موجودی بود متوقف کن
+    const maxStock = asInt(qtyInput.dataset.stock || '0');
+    const current  = asInt(qtyInput.value || '1');
+    if (maxStock && current > maxStock) {
+      e.preventDefault();
+      checkQtyAgainstStock();
+    }
+  });
+})();
 </script>
 {% endblock %}

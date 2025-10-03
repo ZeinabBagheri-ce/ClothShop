@@ -16,6 +16,9 @@ from accounts.models import Address
 @login_required
 @transaction.atomic
 def checkout(request):
+    """
+    مرحله آدرس (در صورت نداشتن آدرس) + مرور و ثبت سفارش.
+    """
     cart = Cart(request)
     if cart.total_quantity() == 0:
         messages.info(request, _("سبد شما خالی است."))
@@ -24,8 +27,10 @@ def checkout(request):
     user_addresses = Address.objects.filter(user=request.user)
     has_addresses = user_addresses.exists()
 
+    # اگر آدرسی ندارد، اول باید آدرس بسازد
     step = request.GET.get("step") or ("address" if not has_addresses else "review")
 
+    # ---------- مرحله ساخت آدرس ----------
     if step == "address":
         if request.method == "POST":
             addr_form = AddressForm(request.POST, prefix="addr_new")
@@ -36,12 +41,11 @@ def checkout(request):
                     address.is_default = True
                 address.save()
                 messages.success(request, _("آدرس با موفقیت ذخیره شد."))
-
                 return redirect(f"{request.path}?step=review")
-            else:
-                messages.error(request, _("لطفاً خطاهای فرم آدرس را بررسی کنید."))
+            messages.error(request, _("لطفاً خطاهای فرم آدرس را بررسی کنید."))
         else:
             addr_form = AddressForm(prefix="addr_new")
+
         return render(
             request,
             "orders/checkout.html",
@@ -53,6 +57,7 @@ def checkout(request):
             },
         )
 
+    # ---------- مرحله مرور و ثبت ----------
     if request.method == "POST":
         form = CheckoutForm(request.user, request.POST)
         if form.is_valid():
@@ -74,6 +79,7 @@ def checkout(request):
 
             subtotal = cart.total_price()
 
+            # کد تخفیف
             coupon_code = (form.cleaned_data.get("coupon_code") or "").strip()
             discount_amount = Decimal("0")
             applied_code = ""
@@ -86,13 +92,14 @@ def checkout(request):
                     discount_amount = Decimal(coupon_obj.compute_discount(subtotal))
                     applied_code = coupon_obj.code
 
-            shipping_cost = calc_shipping(
-                subtotal - discount_amount, address.province.name
-            )
+            # هزینه ارسال
+            shipping_cost = calc_shipping(subtotal - discount_amount, address.province.name)
+
             total = subtotal - discount_amount + shipping_cost
             if total < 0:
                 total = Decimal("0")
 
+            # ساخت سفارش
             order = Order.objects.create(
                 user=request.user,
                 full_name=address.full_name,
@@ -109,14 +116,15 @@ def checkout(request):
                 coupon_code=applied_code,
             )
 
+            # آیتم‌ها + کاهش موجودی
             for row in cart:
                 v = row["variation"]
                 qty = row["quantity"]
+
                 if v.stock < qty:
-                    messages.error(
-                        request, _(f"موجودی کافی برای {v.product.name} موجود نیست.")
-                    )
+                    messages.error(request, _(f"موجودی کافی برای {v.product.name} موجود نیست."))
                     raise ValueError("Insufficient stock")
+
                 OrderItem.objects.create(
                     order=order,
                     variation=v,
@@ -129,13 +137,17 @@ def checkout(request):
                 v.stock -= qty
                 v.save(update_fields=["stock"])
 
+            # افزایش دفعات استفاده از کوپن
             if coupon_obj and applied_code:
                 Coupon.objects.filter(pk=coupon_obj.pk).update(
                     used_count=models.F("used_count") + 1
                 )
 
+            # پاکسازی سبد
             cart.clear()
             messages.success(request, _("سفارش شما ثبت شد."))
+
+            # هدایت به صفحه موفقیت؛ اگر درگاه داری می‌تونی این‌جا به درگاه هم هدایت کنی
             return redirect("orders:success", order_id=order.id)
         else:
             messages.error(request, _("لطفاً خطاهای فرم را بررسی کنید."))
@@ -155,6 +167,32 @@ def checkout(request):
 
 
 @login_required
-def order_success(request, order_id):
-    order = get_object_or_404(Order, id=order_id, user=request.user)
+def order_success(request, order_id: int):
+    """
+    نمایش صفحه موفقیت ثبت/پرداخت سفارش.
+    - کاربر عادی فقط سفارش خودش را می‌بیند.
+    - کارکنان (staff) می‌توانند هر سفارشی را ببینند.
+    """
+    if request.user.is_staff:
+        order = get_object_or_404(Order, id=order_id)
+    else:
+        order = get_object_or_404(Order, id=order_id, user=request.user)
+
     return render(request, "orders/success.html", {"order": order})
+
+
+@login_required
+def payment_failed(request, order_id: int | None = None):
+    """
+    نمایش صفحهٔ خطا/لغو پرداخت (مثلاً بازگشت از درگاه).
+    - اگر order_id ارسال شود و کاربر دسترسی داشته باشد، خلاصه سفارش نیز نشان داده می‌شود.
+    """
+    order = None
+    if order_id is not None:
+        if request.user.is_staff:
+            order = get_object_or_404(Order, id=order_id)
+        else:
+            order = get_object_or_404(Order, id=order_id, user=request.user)
+
+    messages.error(request, _("پرداخت ناموفق بود یا توسط کاربر لغو شد."))
+    return render(request, "orders/payment_failed.html", {"order": order})
